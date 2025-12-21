@@ -40,7 +40,8 @@
         </div>
         <div class="text-right">
             <div class="text-blue-300">POINTS: <span id="pointDisplay">0</span> PTS</div>
-            <div class="text-xs text-gray-400 mt-1">WASD: 移動 | Click: 攻撃</div>
+            <div class="text-xs text-gray-400 mt-1">Weapon: <span id="weaponDisplay">GUN</span></div>
+            <div class="text-xs text-gray-400">WASD: 移動 | Click: 攻撃</div>
         </div>
     </div>
 
@@ -63,6 +64,12 @@
                     <span>移動速度 UP</span>
                     <span class="text-yellow-300 font-bold">150 G</span>
                 </button>
+                <button onclick="game.shopBuy('atk_speed')" class="bg-teal-700 hover:bg-teal-600 text-white p-2 rounded flex justify-between items-center text-sm">
+                    <span>攻撃速度 UP</span>
+                    <span class="text-yellow-300 font-bold">200 G</span>
+                </button>
+                <!-- 武器購入エリア -->
+                <div id="shopWeaponArea" class="mt-2 border-t border-gray-600 pt-2"></div>
             </div>
 
             <div class="flex gap-2 justify-center mb-2">
@@ -103,6 +110,20 @@
                 </button>
             </div>
             <button onclick="game.closeNpcMenu()" class="bg-gray-500 hover:bg-gray-400 text-white px-6 py-2 rounded w-full">閉じる</button>
+        </div>
+    </div>
+
+    <!-- UI: 武器職人メニュー (新追加) -->
+    <div id="weaponSmithMenu" class="absolute inset-0 bg-black/80 flex items-center justify-center hidden z-20">
+        <div class="bg-stone-800 border-2 border-stone-500 p-6 rounded-lg max-w-md w-full shadow-2xl fade-in text-center interactive-ui">
+            <h2 class="text-2xl text-orange-400 mb-2">武器職人</h2>
+            <p class="text-sm text-gray-300 mb-4">装備する武器を選択してください。</p>
+            
+            <div id="weaponList" class="grid grid-cols-1 gap-2 mb-6">
+                <!-- JSで生成 -->
+            </div>
+
+            <button onclick="game.closeWeaponMenu()" class="bg-stone-600 hover:bg-stone-500 text-white px-6 py-2 rounded w-full">閉じる</button>
         </div>
     </div>
 
@@ -151,27 +172,33 @@
             doorFrame: new THREE.MeshStandardMaterial({ color: 0x333333 }),
             doorKnob: new THREE.MeshStandardMaterial({ color: 0xFFD700 }),
             npc: new THREE.MeshStandardMaterial({ color: 0x4ADE80 }),
+            smith: new THREE.MeshStandardMaterial({ color: 0xF97316 }),
             floorSafe: new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.8 }),
             floorBattle: new THREE.MeshStandardMaterial({ color: 0x3f6212, roughness: 0.9 }),
             eye: new THREE.MeshBasicMaterial({ color: 0xffffff }),
             skin: new THREE.MeshStandardMaterial({ color: 0xffccaa, roughness: 0.5 }),
             hair: new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.9 }),
             pants: new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.8 }),
+            sword: new THREE.MeshStandardMaterial({ color: 0xE2E8F0, metalness: 0.9, roughness: 0.1 }),
+            swordHandle: new THREE.MeshStandardMaterial({ color: 0x854D0E }),
+            slash: new THREE.MeshBasicMaterial({ color: 0xFFFFFF, transparent: true, opacity: 0.8, side: THREE.DoubleSide }),
         };
 
         // 共通ジオメトリ
         const GEO = {
             bullet: new THREE.SphereGeometry(0.4, 8, 8),
-            item: new THREE.IcosahedronGeometry(0.6, 0)
+            item: new THREE.IcosahedronGeometry(0.6, 0),
+            // 斬撃用扇形: 中心がX軸上に来るように開始角度を -90度(-PI/2) に設定
+            slash: new THREE.RingGeometry(30, 90, 10, 1, -Math.PI / 2, Math.PI), 
         };
 
         /**
          * 3Dモデル生成ヘルパー (リッチな人型モデル)
          */
-        function createHumanoidGroup(mainMaterialTemplate, scale = 1.0) {
+        function createHumanoidGroup(mainMaterialTemplate, scale = 1.0, withSword = false) {
             const group = new THREE.Group();
             
-            // マテリアルを全て複製して、個体ごとに独立させる (ダメージ発光用)
+            // マテリアルを複製して、個体ごとに独立させる (ダメージ発光用)
             const mainMaterial = mainMaterialTemplate.clone();
             const skinMat = MAT.skin.clone();
             const hairMat = MAT.hair.clone();
@@ -242,6 +269,35 @@
             handR.castShadow = true;
             armRGroup.add(handR);
 
+            // 剣モデル (オプション)
+            if (withSword) {
+                const swordGroup = new THREE.Group();
+                swordGroup.position.set(0, -8.5, 2); 
+                swordGroup.rotation.x = Math.PI / 2; // 前に向ける
+                
+                // 刃
+                const blade = new THREE.Mesh(new THREE.BoxGeometry(2, 16, 0.5), MAT.sword);
+                blade.position.y = 8;
+                blade.castShadow = true;
+                swordGroup.add(blade);
+                // 柄
+                const handle = new THREE.Mesh(new THREE.BoxGeometry(1, 4, 1), MAT.swordHandle);
+                handle.position.y = -2;
+                handle.castShadow = true;
+                swordGroup.add(handle);
+                // 鍔
+                const guard = new THREE.Mesh(new THREE.BoxGeometry(4, 1, 1), MAT.sword);
+                guard.position.y = 0;
+                guard.castShadow = true;
+                swordGroup.add(guard);
+
+                armRGroup.add(swordGroup);
+                
+                // 剣オブジェクトに名前をつけて後で参照しやすくする
+                swordGroup.name = "Sword";
+                swordGroup.visible = false; // 初期状態は非表示（ロジックで制御）
+            }
+
             // --- 脚 (関節あり風) ---
             const legGeo = new THREE.BoxGeometry(3.2, 10, 3.2);
             
@@ -279,7 +335,6 @@
             const group = new THREE.Group();
             const w = 40, h = 50, d = 4;
             
-            // Frame
             const sideGeo = new THREE.BoxGeometry(4, h, 6);
             const topGeo = new THREE.BoxGeometry(w + 8, 4, 6);
             
@@ -298,12 +353,10 @@
             topPost.castShadow = true;
             group.add(topPost);
 
-            // Panel
             const panel = new THREE.Mesh(new THREE.BoxGeometry(w, h, 2), material);
             panel.position.set(0, h/2, 0);
             group.add(panel);
 
-            // Knob
             const knob = new THREE.Mesh(new THREE.SphereGeometry(2), MAT.doorKnob);
             knob.position.set(15, h/2, 2.5);
             group.add(knob);
@@ -327,17 +380,24 @@
                 this.raycaster = new THREE.Raycaster();
                 this.setupInput();
 
-                // エンティティ (論理データ + 3Dメッシュ)
+                // エンティティ
                 this.player = null;
                 this.enemies = [];
                 this.bullets = [];
                 this.items = [];
+                this.effects = []; // エフェクト管理用
                 this.walls = []; // ロジック壁
                 this.interactables = [];
                 this.interactableMeshes = []; // 3D表示用
                 
                 this.metaData = this.loadMetaData();
-                this.runData = { gold: 0, pointsGainedRun: 0 };
+                // 現在のランデータ
+                this.runData = { 
+                    gold: 1000, 
+                    pointsGainedRun: 0,
+                    unlockedWeapons: ['gun'], // 初期武器
+                    currentWeapon: 'gun' 
+                };
 
                 this.initSafeZone();
                 this.animate();
@@ -407,11 +467,10 @@
                 });
 
                 window.addEventListener('mousedown', (e) => {
-                    // UI要素をクリックしたときは攻撃しない
+                    // UI要素のクリックは除外
                     if (e.target.closest('button') || e.target.closest('.interactive-ui')) return;
-
                     this.mouse.down = true;
-                    if (this.state === 'PLAYING' && this.player) this.player.shoot();
+                    if (this.state === 'PLAYING' && this.player) this.player.attack();
                 });
                 window.addEventListener('mouseup', () => this.mouse.down = false);
             }
@@ -435,6 +494,8 @@
                 this.wave = save.wave;
                 this.runData.gold = save.gold;
                 this.runData.pointsGainedRun = save.pointsGainedRun;
+                this.runData.unlockedWeapons = save.unlockedWeapons || ['gun'];
+                this.runData.currentWeapon = save.currentWeapon || 'gun';
                 this.difficultyMultiplier = 1 + (this.wave * 0.1);
                 
                 this.tempLoadStats = save.player;
@@ -448,12 +509,14 @@
                 this.enemies.forEach(e => this.scene.remove(e.mesh));
                 this.bullets.forEach(b => this.scene.remove(b.mesh));
                 this.items.forEach(i => this.scene.remove(i.mesh));
+                this.effects.forEach(e => this.scene.remove(e.mesh));
                 this.interactableMeshes.forEach(m => this.scene.remove(m));
                 if (this.currentFloorMesh) this.scene.remove(this.currentFloorMesh);
 
                 this.enemies = [];
                 this.bullets = [];
                 this.items = [];
+                this.effects = [];
                 this.interactables = [];
                 this.interactableMeshes = [];
                 this.walls = [];
@@ -476,6 +539,8 @@
                 const baseMaxHp = 100 + (this.metaData.maxHpLevel * 10);
                 const baseAtk = 10 + (this.metaData.atkLevel * 2);
                 this.player = new Player(0, 0, baseMaxHp, baseAtk);
+                // セーフゾーンで武器を表示
+                this.player.setWeapon(this.runData.currentWeapon);
                 this.scene.add(this.player.mesh);
 
                 // 3. 壁 (ロジック)
@@ -499,29 +564,42 @@
                 createWall(-roomW/2 - wallThick/2, 0, wallThick, roomH);
                 createWall(roomW/2 + wallThick/2, 0, wallThick, roomH);
 
-                // 5. NPC (人型)
+                // 5. NPC (強化トレーナー)
                 this.interactables.push({ type: 'npc', x: -100, y: -60, r: 20, action: () => this.openNpcMenu() });
-                const npcMesh = createHumanoidGroup(MAT.npc, 1.2); // 少し大きめ
-                npcMesh.position.set(-100, 12, -60); // Y位置調整: scale 1.2 なので 10*1.2 = 12
-                npcMesh.lookAt(0, 12, 0); // 中央を向く
+                const npcMesh = createHumanoidGroup(MAT.npc, 1.2); 
+                npcMesh.position.set(-100, 12, -60); 
+                npcMesh.lookAt(0, 12, 0); 
                 this.scene.add(npcMesh);
                 this.interactableMeshes.push(npcMesh);
 
-                // NPCカーペット
                 const carpet = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.MeshStandardMaterial({color: 0x7f1d1d}));
                 carpet.rotation.x = -Math.PI/2;
                 carpet.position.set(-100, 0.2, -60);
                 this.scene.add(carpet);
                 this.interactableMeshes.push(carpet);
 
-                // 6. ドア (New Game)
+                // 6. NPC (武器職人 Smith) - 追加
+                this.interactables.push({ type: 'smith', x: -100, y: 60, r: 20, action: () => this.openWeaponMenu() });
+                const smithMesh = createHumanoidGroup(MAT.smith, 1.2); 
+                smithMesh.position.set(-100, 12, 60); 
+                smithMesh.lookAt(0, 12, 0); 
+                this.scene.add(smithMesh);
+                this.interactableMeshes.push(smithMesh);
+
+                const carpetSmith = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.MeshStandardMaterial({color: 0xD97706}));
+                carpetSmith.rotation.x = -Math.PI/2;
+                carpetSmith.position.set(-100, 0.2, 60);
+                this.scene.add(carpetSmith);
+                this.interactableMeshes.push(carpetSmith);
+
+                // 7. ドア (New Game)
                 this.interactables.push({ type: 'door', x: -25, y: -140, w: 50, h: 20, action: () => this.startNewGame() });
                 const doorMesh = createDoorGroup(MAT.doorStart);
                 doorMesh.position.set(0, 0, -148);
                 this.scene.add(doorMesh);
                 this.interactableMeshes.push(doorMesh);
                 
-                // 7. ドア (Load Game)
+                // 8. ドア (Load Game)
                 if (this.hasSaveData()) {
                     this.interactables.push({ type: 'door', x: 100, y: -140, w: 50, h: 20, action: () => this.loadSaveGame() });
                     const loadMesh = createDoorGroup(MAT.doorLoad);
@@ -534,6 +612,7 @@
                 $('hud').classList.add('hidden');
                 $('waveMenu').classList.add('hidden');
                 $('npcMenu').classList.add('hidden');
+                $('weaponSmithMenu').classList.add('hidden');
                 $('gameOverMenu').classList.add('hidden');
             }
 
@@ -541,7 +620,7 @@
                 localStorage.removeItem(STORAGE_KEY_SAVE);
                 this.wave = 1;
                 this.difficultyMultiplier = 1;
-                this.runData = { gold: 0, pointsGainedRun: 0 };
+                this.runData = { gold: 1000, pointsGainedRun: 0, unlockedWeapons: ['gun'], currentWeapon: 'gun' };
                 this.tempLoadStats = null;
                 this.startBattlePhase();
             }
@@ -581,8 +660,10 @@
                     this.player.atk = this.tempLoadStats.atk;
                     this.player.maxHp = this.tempLoadStats.maxHp;
                     this.player.speed = this.tempLoadStats.speed;
+                    if(this.tempLoadStats.fireRate) this.player.fireRate = this.tempLoadStats.fireRate; // 攻撃速度引き継ぎ
                     this.tempLoadStats = null;
                 }
+                this.player.setWeapon(this.runData.currentWeapon);
 
                 this.scene.add(this.player.mesh);
 
@@ -631,7 +712,7 @@
                     const targetZ = this.player.y + 300; 
                     this.camera.position.x += (targetX - this.camera.position.x) * 0.1;
                     this.camera.position.z += (targetZ - this.camera.position.z) * 0.1;
-                    // カメラの回転(lookAt)を削除し、固定アングルでの追従に変更
+                    // 固定アングル
                     // this.camera.lookAt(this.player.x, 0, this.player.y);
 
                     this.playerLight.position.set(this.player.x, 50, this.player.y);
@@ -696,6 +777,16 @@
                     }
                 }
 
+                // エフェクト更新
+                for (let i = this.effects.length - 1; i >= 0; i--) {
+                    const eff = this.effects[i];
+                    eff.update();
+                    if (eff.life <= 0) {
+                        this.scene.remove(eff.mesh);
+                        this.effects.splice(i, 1);
+                    }
+                }
+
                 // インタラクション
                 if (this.state === 'SAFE_ZONE') {
                     for (let obj of this.interactables) {
@@ -731,7 +822,6 @@
 
                 if (this.enemies.length === 0) {
                     setTimeout(() => {
-                        // this.state = 'MENU'; // 削除: MENUステートにせずPLAYINGを維持して動けるようにする
                         this.openWaveMenu();
                     }, 1000);
                 }
@@ -741,6 +831,27 @@
                 $('waveMenu').classList.remove('hidden');
                 $('menuWaveNum').innerText = this.wave;
                 $('saveSection').classList.toggle('hidden', this.wave % 10 !== 0);
+                
+                // ショップ武器エリア更新
+                const area = $('shopWeaponArea');
+                area.innerHTML = '';
+                // 剣を持っていない場合
+                if (!this.runData.unlockedWeapons.includes('sword')) {
+                    const btn = document.createElement('button');
+                    btn.className = "bg-orange-700 hover:bg-orange-600 text-white p-2 rounded flex justify-between items-center text-sm w-full";
+                    btn.innerHTML = '<span>剣 (Sword) 解放</span><span class="text-yellow-300 font-bold">1000 G</span>';
+                    btn.onclick = () => this.shopBuy('unlock_sword');
+                    area.appendChild(btn);
+                } else {
+                    // 購入済みなら切り替えボタン
+                    const btn = document.createElement('button');
+                    const nextWep = this.runData.currentWeapon === 'gun' ? 'sword' : 'gun';
+                    const label = nextWep === 'gun' ? '銃' : '剣';
+                    btn.className = "bg-gray-700 hover:bg-gray-600 text-white p-2 rounded text-center text-sm w-full";
+                    btn.innerHTML = `装備切り替え: ${label}へ`;
+                    btn.onclick = () => this.switchWeapon(nextWep);
+                    area.appendChild(btn);
+                }
             }
 
             nextWave() {
@@ -763,7 +874,9 @@
             saveAndQuit() {
                 const saveData = {
                     wave: this.wave, gold: this.runData.gold, pointsGainedRun: this.runData.pointsGainedRun,
-                    player: { maxHp: this.player.maxHp, hp: this.player.hp, atk: this.player.atk, speed: this.player.speed }
+                    unlockedWeapons: this.runData.unlockedWeapons,
+                    currentWeapon: this.runData.currentWeapon,
+                    player: { maxHp: this.player.maxHp, hp: this.player.hp, atk: this.player.atk, speed: this.player.speed, fireRate: this.player.fireRate }
                 };
                 localStorage.setItem(STORAGE_KEY_SAVE, JSON.stringify(saveData));
                 this.initSafeZone();
@@ -777,6 +890,7 @@
                 $('hpDisplay').innerText = `${Math.ceil(this.player.hp)}/${this.player.maxHp}`;
                 $('goldDisplay').innerText = this.runData.gold;
                 $('pointDisplay').innerText = this.runData.pointsGainedRun;
+                $('weaponDisplay').innerText = this.runData.currentWeapon.toUpperCase();
                 $('hpDisplay').style.color = (this.player.hp / this.player.maxHp) < 0.3 ? '#ef4444' : 'white';
             }
 
@@ -792,13 +906,30 @@
             }
 
             shopBuy(type) {
-                const costs = { heal: 50, atk: 100, speed: 150 };
+                const costs = { heal: 50, atk: 100, speed: 150, atk_speed: 200, unlock_sword: 1000 };
+                
                 if (this.runData.gold >= costs[type]) {
                     let bought = false;
                     if (type === 'heal' && this.player.hp < this.player.maxHp) {
                         this.player.hp = Math.min(this.player.maxHp, this.player.hp + this.player.maxHp * 0.5); bought = true;
                     } else if (type === 'atk') { this.player.atk++; bought = true; }
                     else if (type === 'speed') { this.player.speed += 0.2; bought = true; }
+                    else if (type === 'atk_speed') { 
+                        // 攻撃速度短縮 (下限100ms)
+                        if (this.player.fireRate > 100) {
+                            this.player.fireRate -= 50; 
+                            if (this.player.fireRate < 100) this.player.fireRate = 100;
+                            bought = true; 
+                        } else {
+                            this.showNotification("これ以上早くなりません");
+                            return;
+                        }
+                    }
+                    else if (type === 'unlock_sword') {
+                        this.runData.unlockedWeapons.push('sword');
+                        bought = true;
+                        this.openWaveMenu(); // メニュー更新
+                    }
 
                     if (bought) {
                         this.runData.gold -= costs[type];
@@ -808,8 +939,34 @@
                 } else this.showNotification("お金が足りません");
             }
 
+            switchWeapon(wep) {
+                this.runData.currentWeapon = wep;
+                this.player.setWeapon(wep);
+                this.updateHud();
+                this.openWaveMenu(); // ショップメニュー更新
+                if(this.state === 'SAFE_ZONE') this.openWeaponMenu(); // 武器職人メニュー更新
+            }
+
             openNpcMenu() { this.state = 'MENU'; $('npcMenu').classList.remove('hidden'); this.updateNpcMenu(); }
             closeNpcMenu() { $('npcMenu').classList.add('hidden'); this.state = 'SAFE_ZONE'; this.player.y += 40; }
+            
+            openWeaponMenu() {
+                this.state = 'MENU';
+                $('weaponSmithMenu').classList.remove('hidden');
+                const list = $('weaponList');
+                list.innerHTML = '';
+                this.runData.unlockedWeapons.forEach(wep => {
+                    const btn = document.createElement('button');
+                    const label = wep === 'gun' ? '銃 (Gun)' : '剣 (Sword)';
+                    const isActive = this.runData.currentWeapon === wep;
+                    btn.className = `p-3 rounded border text-left ${isActive ? 'bg-orange-700 border-orange-500' : 'bg-gray-700 hover:bg-gray-600 border-gray-600'}`;
+                    btn.innerText = label + (isActive ? ' [装備中]' : '');
+                    if (!isActive) btn.onclick = () => this.switchWeapon(wep);
+                    list.appendChild(btn);
+                });
+            }
+            closeWeaponMenu() { $('weaponSmithMenu').classList.add('hidden'); this.state = 'SAFE_ZONE'; this.player.y += 40; }
+
             updateNpcMenu() {
                 $('npcPoints').innerText = this.metaData.points;
                 $('metaMaxHpVal').innerText = 100 + (this.metaData.maxHpLevel * 10);
@@ -837,17 +994,26 @@
                 this.x = x; this.y = y; this.r = 15;
                 this.maxHp = maxHp; this.hp = maxHp; this.atk = atk;
                 this.speed = 2.5;
-                this.lastShot = 0; this.fireRate = 300;
+                this.lastAttack = 0; this.fireRate = 600; 
+                this.weapon = 'gun'; // gun, sword
 
-                // 3D Mesh
-                this.mesh = createHumanoidGroup(MAT.player);
-                this.mesh.position.set(x, 10, y); // Y=10 で足元が地面に合う
+                // 3D Mesh (with Sword mesh inside but hidden)
+                this.mesh = createHumanoidGroup(MAT.player, 1.0, true);
+                this.mesh.position.set(x, 10, y); 
                 this.parts = {
                     armL: this.mesh.getObjectByName("ArmL"),
                     armR: this.mesh.getObjectByName("ArmR"),
                     legL: this.mesh.getObjectByName("LegL"),
-                    legR: this.mesh.getObjectByName("LegR")
+                    legR: this.mesh.getObjectByName("LegR"),
+                    sword: this.mesh.getObjectByName("Sword")
                 };
+            }
+
+            setWeapon(wep) {
+                this.weapon = wep;
+                if (this.parts.sword) {
+                    this.parts.sword.visible = (wep === 'sword');
+                }
             }
 
             update(keys, mouse, walls) {
@@ -879,13 +1045,18 @@
                     // 歩行アニメーション
                     const time = Date.now() * 0.015;
                     if(this.parts.armL) this.parts.armL.rotation.x = Math.sin(time) * 0.5;
-                    if(this.parts.armR) this.parts.armR.rotation.x = -Math.sin(time) * 0.5;
+                    // 攻撃中でなければ右腕も振る
+                    if(Date.now() - this.lastAttack > this.fireRate/2) {
+                        if(this.parts.armR) this.parts.armR.rotation.x = -Math.sin(time) * 0.5;
+                    }
                     if(this.parts.legL) this.parts.legL.rotation.x = -Math.sin(time) * 0.5;
                     if(this.parts.legR) this.parts.legR.rotation.x = Math.sin(time) * 0.5;
                 } else {
                     // 停止
                     if(this.parts.armL) this.parts.armL.rotation.x = 0;
-                    if(this.parts.armR) this.parts.armR.rotation.x = 0;
+                    if(Date.now() - this.lastAttack > this.fireRate/2) {
+                        if(this.parts.armR) this.parts.armR.rotation.x = 0;
+                    }
                     if(this.parts.legL) this.parts.legL.rotation.x = 0;
                     if(this.parts.legR) this.parts.legR.rotation.x = 0;
                 }
@@ -896,16 +1067,66 @@
 
                 // マウスの方向を向く
                 this.mesh.lookAt(mouse.x, 10, mouse.y);
+
+                // 剣のアニメーション（攻撃時）
+                if (this.weapon === 'sword' && Date.now() - this.lastAttack < 200) {
+                    // 右腕を振る
+                    if (this.parts.armR) {
+                        this.parts.armR.rotation.x = -Math.PI / 2; // 前に突き出す
+                        // 振り下ろし的な動き（簡易）
+                        const progress = (Date.now() - this.lastAttack) / 200;
+                        this.parts.armR.rotation.y = -Math.PI / 4 + progress * Math.PI / 2; 
+                    }
+                } else if (this.weapon === 'sword') {
+                    // 剣構え
+                    if(this.parts.armR) {
+                        this.parts.armR.rotation.x = 0;
+                        this.parts.armR.rotation.y = 0;
+                    }
+                }
             }
 
-            shoot() {
+            attack() {
                 const now = Date.now();
-                if (now - this.lastShot > this.fireRate) {
+                if (now - this.lastAttack < this.fireRate) return;
+                
+                this.lastAttack = now;
+
+                if (this.weapon === 'gun') {
+                    // 銃撃
                     const angle = Math.atan2(game.mouse.y - this.y, game.mouse.x - this.x);
                     const b = new Bullet(this.x, this.y, angle);
                     game.bullets.push(b);
                     game.scene.add(b.mesh);
-                    this.lastShot = now;
+                } else if (this.weapon === 'sword') {
+                    // 剣攻撃 (範囲)
+                    const range = 100;
+                    const arc = Math.PI / 1.5; 
+                    const facingAngle = Math.atan2(game.mouse.y - this.y, game.mouse.x - this.x);
+                    
+                    // 斬撃エフェクト生成
+                    const slash = new Effect(this.x, this.y, facingAngle);
+                    game.effects.push(slash);
+                    game.scene.add(slash.mesh);
+
+                    // 判定
+                    for (let i = game.enemies.length - 1; i >= 0; i--) {
+                        const e = game.enemies[i];
+                        const dist = Math.hypot(e.x - this.x, e.y - this.y);
+                        if (dist < range) {
+                            let angleToEnemy = Math.atan2(e.y - this.y, e.x - this.x);
+                            let diff = angleToEnemy - facingAngle;
+                            // 角度差を -PI ~ PI に正規化
+                            while (diff > Math.PI) diff -= Math.PI * 2;
+                            while (diff < -Math.PI) diff += Math.PI * 2;
+                            
+                            if (Math.abs(diff) < arc / 2) {
+                                e.takeDamage(this.atk * 1.5); 
+                                e.recoil(this);
+                                if (e.hp <= 0) game.killEnemy(e, i);
+                            }
+                        }
+                    }
                 }
             }
 
@@ -913,13 +1134,10 @@
                 this.hp -= amt;
                 // ヒットエフェクト
                 this.mesh.traverse(child => {
-                    // MeshStandardMaterialのみ対象にする（emissiveを持つため）
                     if (child.isMesh && child.material && child.material.isMeshStandardMaterial) {
-                        // 連続被弾しても色が戻るように、現在の色を保存せず赤くし、必ず黒(0x000000)に戻す
                         child.material.emissive.setHex(0xff0000);
                         setTimeout(() => {
-                            // オブジェクトがまだ存在しているか確認
-                            if (child && child.material && child.material.emissive) {
+                            if (child.material && child.material.emissive) {
                                 child.material.emissive.setHex(0x000000);
                             }
                         }, 100);
@@ -1010,6 +1228,27 @@
                 this.x += this.vx; this.y += this.vy;
                 this.mesh.position.x = this.x;
                 this.mesh.position.z = this.y;
+            }
+        }
+
+        class Effect {
+            constructor(x, y, angle) {
+                this.life = 1.0;
+                this.mesh = new THREE.Mesh(GEO.slash, MAT.slash.clone());
+                this.mesh.position.set(x, 12, y); // 高さを腰の位置に合わせる
+                this.mesh.rotation.x = -Math.PI / 2;
+                // 斬撃の中心をマウスの方向に合わせる
+                // Math.atan2(z, x) は手前が正、Three.jsの回転は奥が正(反時計)なので符号反転
+                this.mesh.rotation.z = -angle; 
+                
+                // プレイヤーの少し前へずらす
+                this.mesh.position.x += Math.cos(angle) * 20;
+                this.mesh.position.z += Math.sin(angle) * 20;
+            }
+            update() {
+                this.life -= 0.15; // 素早く消えるように
+                this.mesh.material.opacity = this.life;
+                // 拡大処理は削除してキレを出す
             }
         }
 
