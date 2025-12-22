@@ -9,7 +9,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         body { margin: 0; overflow: hidden; background-color: #000; color: white; touch-action: none; user-select: none; }
-        /* Three.jsのキャンバスはJSで生成されます */
         
         .pixel-font { font-family: 'Courier New', Courier, monospace; font-weight: bold; }
         
@@ -24,12 +23,105 @@
         
         .pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+
+        /* Floating Text */
+        .floating-text {
+            position: absolute;
+            pointer-events: none;
+            font-weight: bold;
+            text-shadow: 1px 1px 0 #000;
+            animation: floatUp 1s ease-out forwards;
+            z-index: 30;
+        }
+        @keyframes floatUp {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(-50px) scale(1.5); }
+        }
+
+        /* 画面外インジケーター */
+        #indicator-container {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 5;
+            overflow: hidden;
+        }
+        .indicator {
+            position: absolute;
+            transform-origin: center;
+            opacity: 0.8;
+            display: none; /* JSで制御 */
+        }
+        .enemy-ind {
+            width: 0; 
+            height: 0; 
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-bottom: 16px solid #ef4444; /* Red */
+        }
+        .boss-ind {
+            border-bottom-color: #a855f7; /* Purple */
+            transform: scale(1.5);
+        }
+        .gold-ind {
+            width: 10px;
+            height: 10px;
+            background-color: #facc15; /* Yellow */
+            border-radius: 50%;
+            box-shadow: 0 0 4px #facc15;
+            border: 1px solid #fff;
+        }
+
+        /* スキルクールダウン表示 */
+        .skill-slot {
+            position: relative;
+            width: 50px;
+            height: 50px;
+            background: #333;
+            border: 2px solid #555;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            color: #fff;
+            overflow: hidden;
+        }
+        .skill-cd-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 0%;
+            background: rgba(0, 0, 0, 0.7);
+            transition: height 0.1s linear;
+        }
+        .skill-key {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            font-size: 10px;
+            color: #aaa;
+        }
+        
+        /* 選択肢カード */
+        .choice-card {
+            transition: transform 0.2s, border-color 0.2s;
+            cursor: pointer;
+        }
+        .choice-card:hover {
+            transform: scale(1.05);
+            border-color: #FACC15;
+        }
     </style>
 </head>
 <body class="pixel-font">
 
     <!-- Three.js Container -->
     <div id="canvas-container" class="absolute inset-0 z-0"></div>
+
+    <!-- 画面外インジケーターコンテナ -->
+    <div id="indicator-container"></div>
 
     <!-- UI: HUD (ゲーム中常時表示) -->
     <div id="hud" class="absolute top-0 left-0 w-full p-4 pointer-events-none hidden flex justify-between items-start text-shadow-md z-10">
@@ -45,125 +137,143 @@
         </div>
     </div>
 
-    <!-- UI: ウェーブクリア / ショップメニュー (右上に配置) -->
-    <div id="waveMenu" class="absolute top-20 right-4 flex flex-col items-end hidden z-20 pointer-events-none">
-        <div class="bg-gray-800/90 border-2 border-gray-600 p-4 rounded-lg shadow-2xl pointer-events-auto text-center interactive-ui max-w-sm fade-in">
-            <h2 class="text-2xl text-yellow-400 mb-1">WAVE <span id="menuWaveNum"></span> CLEAR!</h2>
-            <p class="mb-4 text-gray-300 text-sm">強化して次のウェーブへ</p>
+    <!-- スキルバー -->
+    <div id="skillBar" class="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2 pointer-events-none hidden z-10">
+        <!-- JSで生成 -->
+    </div>
 
-            <div class="grid grid-cols-1 gap-2 mb-4">
-                <button onclick="game.shopBuy('heal')" class="bg-green-700 hover:bg-green-600 text-white p-2 rounded flex justify-between items-center text-sm">
-                    <span>HP回復 (50%)</span>
-                    <span class="text-yellow-300 font-bold">50 G</span>
-                </button>
-                <button onclick="game.shopBuy('atk')" class="bg-red-700 hover:bg-red-600 text-white p-2 rounded flex justify-between items-center text-sm">
-                    <span>攻撃力 UP (+1)</span>
-                    <span class="text-yellow-300 font-bold">100 G</span>
-                </button>
-                <button onclick="game.shopBuy('speed')" class="bg-blue-700 hover:bg-blue-600 text-white p-2 rounded flex justify-between items-center text-sm">
-                    <span>移動速度 UP</span>
-                    <span class="text-yellow-300 font-bold">150 G</span>
-                </button>
-                <button onclick="game.shopBuy('atk_speed')" class="bg-teal-700 hover:bg-teal-600 text-white p-2 rounded flex justify-between items-center text-sm">
-                    <span>攻撃速度 UP</span>
-                    <span class="text-yellow-300 font-bold">200 G</span>
-                </button>
-                <!-- 武器購入エリア -->
-                <div id="shopWeaponArea" class="mt-2 border-t border-gray-600 pt-2"></div>
-            </div>
+    <!-- UI: ウェーブクリア / スキル選択メニュー -->
+    <div id="waveMenu" class="absolute inset-0 bg-black/80 flex flex-col items-center justify-center hidden z-20">
+        <div class="text-center mb-8 fade-in">
+            <h2 class="text-4xl text-yellow-400 mb-2">WAVE <span id="menuWaveNum"></span> CLEAR!</h2>
+            <p id="waveMenuSubtitle" class="text-gray-300">報酬を選択してください</p>
+        </div>
+        
+        <!-- 報酬選択エリア -->
+        <div id="choiceContainer" class="flex flex-wrap justify-center gap-4 max-w-4xl w-full px-4 interactive-ui fade-in">
+            <!-- カードがここに生成されます -->
+        </div>
 
-            <div class="flex gap-2 justify-center mb-2">
-                <button onclick="game.nextWave()" class="bg-yellow-600 hover:bg-yellow-500 text-white px-4 py-2 rounded font-bold text-base w-full">
-                    次へ進む
-                </button>
-            </div>
-
-            <div id="saveSection" class="border-t border-gray-600 pt-2 hidden">
-                <p class="text-xs text-green-400 mb-1">★ セーブ可能 ★</p>
-                <button onclick="game.saveAndQuit()" class="bg-purple-700 hover:bg-purple-600 text-white px-3 py-1 rounded w-full text-xs">
-                    保存して終了
-                </button>
-            </div>
+        <!-- 次へ/帰還 選択エリア (初期は非表示) -->
+        <div id="postWaveControls" class="flex-col gap-4 items-center hidden interactive-ui fade-in w-full max-w-md">
+            <button onclick="game.nextWave()" class="bg-yellow-600 hover:bg-yellow-500 text-white px-8 py-4 rounded text-xl font-bold w-full transition shadow-lg border-2 border-yellow-400">
+                次のウェーブへ進む
+            </button>
+            <button onclick="game.returnToSafeZone()" class="bg-purple-700 hover:bg-purple-600 text-white px-6 py-3 rounded w-full transition shadow-lg border border-purple-400">
+                セーフゾーンへ帰還
+            </button>
+            <p class="text-xs text-gray-400 mt-2">※帰還すると現在のゴールドは失われますが、ポイントは持ち帰れます。</p>
         </div>
     </div>
 
-    <!-- UI: NPCメニュー -->
+    <!-- UI: NPCメニュー (Trainer) -->
     <div id="npcMenu" class="absolute inset-0 bg-black/80 flex items-center justify-center hidden z-20">
         <div class="bg-slate-800 border-2 border-slate-500 p-6 rounded-lg max-w-md w-full shadow-2xl fade-in text-center interactive-ui">
             <h2 class="text-2xl text-green-400 mb-2">強化トレーナー</h2>
-            <p class="text-sm text-gray-300 mb-4">獲得したポイントで基礎能力を底上げします。<br>(死んでもリセットされません)</p>
+            <p class="text-xs text-gray-300 mb-4">獲得したポイントで基礎能力を底上げします。<br>(死亡時のみ利用可能)</p>
             <div class="text-right mb-4 text-blue-300 font-bold">所持ポイント: <span id="npcPoints">0</span></div>
-            <div class="grid grid-cols-1 gap-2 mb-6">
-                <button onclick="game.upgradeMeta('maxHp')" class="bg-gray-700 hover:bg-gray-600 p-3 rounded flex justify-between border border-gray-600">
+            <div class="grid grid-cols-1 gap-2 mb-6 max-h-96 overflow-y-auto pr-2">
+                <button onclick="game.upgradeMeta('maxHp')" class="bg-gray-700 hover:bg-gray-600 p-3 rounded flex justify-between border border-gray-600 transition">
                     <div class="text-left">
                         <div class="text-white">最大HP強化</div>
-                        <div class="text-xs text-gray-400">現在: <span id="metaMaxHpVal">100</span></div>
+                        <div class="text-xs text-gray-400">現在: <span id="metaMaxHpVal">0</span></div>
                     </div>
                     <div class="text-blue-300 font-bold self-center">100 Pts</div>
                 </button>
-                <button onclick="game.upgradeMeta('baseAtk')" class="bg-gray-700 hover:bg-gray-600 p-3 rounded flex justify-between border border-gray-600">
+                <button onclick="game.upgradeMeta('baseAtk')" class="bg-gray-700 hover:bg-gray-600 p-3 rounded flex justify-between border border-gray-600 transition">
                     <div class="text-left">
                         <div class="text-white">基礎攻撃力強化</div>
-                        <div class="text-xs text-gray-400">現在: <span id="metaAtkVal">10</span></div>
+                        <div class="text-xs text-gray-400">現在: <span id="metaAtkVal">0</span></div>
                     </div>
                     <div class="text-blue-300 font-bold self-center">200 Pts</div>
                 </button>
+                <button onclick="game.upgradeMeta('skillSlot')" class="bg-gray-700 hover:bg-gray-600 p-3 rounded flex justify-between border border-gray-600 transition">
+                    <div class="text-left">
+                        <div class="text-white">スキル保有枠拡張</div>
+                        <div class="text-xs text-gray-400">現在: <span id="metaSkillSlotVal">3</span> / 最大 5</div>
+                    </div>
+                    <div class="text-blue-300 font-bold self-center">500 Pts</div>
+                </button>
+                <!-- 不死のトーテム -->
+                <button onclick="game.upgradeMeta('totem')" class="bg-indigo-900 hover:bg-indigo-800 p-3 rounded flex justify-between border border-indigo-500 transition">
+                    <div class="text-left">
+                        <div class="text-yellow-300 font-bold">不死のトーテム</div>
+                        <div class="text-xs text-gray-300">所持数: <span id="metaTotemVal">0</span></div>
+                        <div class="text-[10px] text-gray-400">死亡時に復活可能</div>
+                    </div>
+                    <div class="text-blue-300 font-bold self-center">1000 Pts</div>
+                </button>
             </div>
-            <button onclick="game.closeNpcMenu()" class="bg-gray-500 hover:bg-gray-400 text-white px-6 py-2 rounded w-full">閉じる</button>
+            <button onclick="game.closeNpcMenu()" class="bg-gray-500 hover:bg-gray-400 text-white px-6 py-2 rounded w-full transition">閉じる</button>
         </div>
     </div>
 
-    <!-- UI: 武器職人メニュー (新追加) -->
+    <!-- UI: 武器職人メニュー -->
     <div id="weaponSmithMenu" class="absolute inset-0 bg-black/80 flex items-center justify-center hidden z-20">
         <div class="bg-stone-800 border-2 border-stone-500 p-6 rounded-lg max-w-md w-full shadow-2xl fade-in text-center interactive-ui">
             <h2 class="text-2xl text-orange-400 mb-2">武器職人</h2>
-            <p class="text-sm text-gray-300 mb-4">装備する武器を選択してください。</p>
+            <p class="text-sm text-gray-300 mb-4">武器の購入・装備変更ができます。</p>
+            <div class="text-right mb-4 text-yellow-300 font-bold">所持金: <span id="smithGold">0</span> G</div>
             
             <div id="weaponList" class="grid grid-cols-1 gap-2 mb-6">
-                <!-- JSで生成 -->
+                <!-- Generated by JS -->
             </div>
 
-            <button onclick="game.closeWeaponMenu()" class="bg-stone-600 hover:bg-stone-500 text-white px-6 py-2 rounded w-full">閉じる</button>
+            <button onclick="game.closeWeaponMenu()" class="bg-stone-600 hover:bg-stone-500 text-white px-6 py-2 rounded w-full transition">閉じる</button>
         </div>
     </div>
 
-    <!-- UI: ゲームオーバー -->
+    <!-- UI: Game Over -->
     <div id="gameOverMenu" class="absolute inset-0 bg-red-900/90 flex items-center justify-center hidden z-30">
         <div class="text-center fade-in">
             <h1 class="text-5xl text-white font-bold mb-4">YOU DIED</h1>
-            <p class="text-xl text-yellow-200 mb-6">獲得ポイント: <span id="goPoints">0</span> PTS</p>
+            <p class="text-xl text-yellow-200 mb-6">獲得ポイント: <span id="goPoints">0</span></p>
             <p class="text-lg text-white pulse font-bold">セーフゾーンへ帰還中...</p>
         </div>
     </div>
 
-    <!-- UI: 通知 -->
-    <div id="notification" class="absolute bottom-10 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-4 py-2 rounded opacity-0 transition-opacity duration-300 pointer-events-none z-40">Message</div>
+    <!-- UI: Revive Confirm (Totem) -->
+    <div id="reviveMenu" class="absolute inset-0 bg-black/90 flex items-center justify-center hidden z-40">
+        <div class="text-center fade-in bg-gray-900 p-8 rounded-lg border-2 border-yellow-500 shadow-2xl interactive-ui">
+            <h1 class="text-3xl text-yellow-400 font-bold mb-4">不死のトーテム</h1>
+            <p class="text-white mb-6">トーテムを使用して復活しますか？<br><span class="text-sm text-gray-400">(残り所持数: <span id="reviveTotemCount">0</span>)</span></p>
+            <div class="flex gap-4 justify-center">
+                <button onclick="game.useTotem()" class="bg-green-600 hover:bg-green-500 text-white px-6 py-2 rounded font-bold transition">はい (復活)</button>
+                <button onclick="game.confirmGameOver()" class="bg-red-600 hover:bg-red-500 text-white px-6 py-2 rounded font-bold transition">いいえ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- UI: Notification -->
+    <div id="notification" class="absolute bottom-10 left-1/2 transform -translate-x-1/2 bg-gray-800 border border-gray-600 text-white px-4 py-2 rounded shadow-lg transition-opacity duration-300 pointer-events-none z-40 opacity-0"></div>
+    
+    <!-- Floating Text Container -->
+    <div id="floatingTextContainer" class="absolute inset-0 pointer-events-none overflow-hidden z-10"></div>
 
     <script>
-        /**
-         * ユーティリティ & 共通設定
-         */
+        // --- Utils ---
         const $ = (id) => document.getElementById(id);
         const random = (min, max) => Math.random() * (max - min) + min;
-        const LOGIC_SCALE = 1.0; 
 
-        // 2Dロジック用衝突判定
+        // Collision Logic
         const checkRectCollide = (r1, r2) => r1.x < r2.x + r2.w && r1.x + r1.w > r2.x && r1.y < r2.y + r2.h && r1.y + r1.h > r2.y;
         const checkCircleCollide = (c1, c2) => {
             const dx = c1.x - c2.x;
             const dy = c1.y - c2.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            return distance < c1.r + c2.r;
+            return Math.sqrt(dx*dx + dy*dy) < c1.r + c2.r;
         };
 
-        const STORAGE_KEY_META = 'rogue_meta_v3d';
-        const STORAGE_KEY_SAVE = 'rogue_save_v3d';
+        const STORAGE_KEY_META = 'rogue_meta_v3d_5'; // Version Up
+        const STORAGE_KEY_SAVE = 'rogue_save_v3d_5';
+        const SKILL_KEYS = ['Z', 'X', 'C', 'V', 'B'];
 
-        // Three.js マテリアルキャッシュ
+        // Materials
         const MAT = {
             player: new THREE.MeshStandardMaterial({ color: 0x3B82F6, roughness: 0.3 }),
             enemy: new THREE.MeshStandardMaterial({ color: 0xEF4444, roughness: 0.2 }),
-            bullet: new THREE.MeshBasicMaterial({ color: 0xFFFFFF }),
+            boss: new THREE.MeshStandardMaterial({ color: 0x9333ea, roughness: 0.2, metalness: 0.5 }), // Boss Purple
+            bullet: new THREE.MeshBasicMaterial({ color: 0xFFFFFF }), // White
+            enemyBullet: new THREE.MeshBasicMaterial({ color: 0xFF00FF }), // Magenta
             gold: new THREE.MeshStandardMaterial({ color: 0xFACC15, metalness: 0.8, roughness: 0.2 }),
             point: new THREE.MeshStandardMaterial({ color: 0x60A5FA, emissive: 0x224488 }),
             wall: new THREE.MeshStandardMaterial({ color: 0x475569 }),
@@ -173,6 +283,7 @@
             doorKnob: new THREE.MeshStandardMaterial({ color: 0xFFD700 }),
             npc: new THREE.MeshStandardMaterial({ color: 0x4ADE80 }),
             smith: new THREE.MeshStandardMaterial({ color: 0xF97316 }),
+            savePoint: new THREE.MeshStandardMaterial({ color: 0x00ffff, emissive: 0x0088ff, emissiveIntensity: 0.5 }),
             floorSafe: new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.8 }),
             floorBattle: new THREE.MeshStandardMaterial({ color: 0x3f6212, roughness: 0.9 }),
             eye: new THREE.MeshBasicMaterial({ color: 0xffffff }),
@@ -181,222 +292,508 @@
             pants: new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.8 }),
             sword: new THREE.MeshStandardMaterial({ color: 0xE2E8F0, metalness: 0.9, roughness: 0.1 }),
             swordHandle: new THREE.MeshStandardMaterial({ color: 0x854D0E }),
-            slash: new THREE.MeshBasicMaterial({ color: 0xFFFFFF, transparent: true, opacity: 0.8, side: THREE.DoubleSide }),
+            slash: new THREE.MeshBasicMaterial({ color: 0xAADDFF, transparent: true, opacity: 0.8, side: THREE.DoubleSide }),
+            gunEnemy: new THREE.MeshStandardMaterial({ color: 0x333333 }),
+            // New Skills
+            skillOrb: new THREE.MeshStandardMaterial({ color: 0x00FFFF, emissive: 0x008888 }),
+            skillSlash: new THREE.MeshBasicMaterial({ color: 0xAAFFAA, side: THREE.DoubleSide, transparent: true, opacity: 0.8 }),
+            skillWave: new THREE.MeshBasicMaterial({ color: 0xFF00FF, side: THREE.DoubleSide, transparent: true, opacity: 0.5 }),
         };
 
-        // 共通ジオメトリ
         const GEO = {
             bullet: new THREE.SphereGeometry(0.4, 8, 8),
             item: new THREE.IcosahedronGeometry(0.6, 0),
-            // 斬撃用扇形: 中心がX軸上に来るように開始角度を -90度(-PI/2) に設定
-            slash: new THREE.RingGeometry(30, 90, 10, 1, -Math.PI / 2, Math.PI), 
+            slash: new THREE.RingGeometry(30, 90, 10, 1, -Math.PI / 2, Math.PI),
+            orb: new THREE.BoxGeometry(10, 10, 10),
+            waveRing: new THREE.RingGeometry(10, 15, 32),
+            straightSlash: new THREE.PlaneGeometry(60, 20),
+            savePoint: new THREE.OctahedronGeometry(15, 0),
         };
 
-        /**
-         * 3Dモデル生成ヘルパー (リッチな人型モデル)
-         */
-        function createHumanoidGroup(mainMaterialTemplate, scale = 1.0, withSword = false) {
+        const WEAPON_DEFS = {
+            gun: { name: '銃 (Gun)', price: 0, desc: '標準的な遠距離武器' },
+            sword: { name: '剣 (Sword)', price: 1000, desc: '広範囲の近接攻撃' }
+        };
+
+        const SKILL_DEFS = {
+            orb: { 
+                id: 'orb', name: "サテライト", type: 'active',
+                desc: "周囲を回転する弾を召喚",
+                maxCount: 6, baseDmg: 10, dmgStep: 5, 
+                duration: 6000, cd: 12000 
+            },
+            slash: { 
+                id: 'slash', name: "スローブレード", type: 'active',
+                desc: "ゆっくり直進する巨大な刃",
+                maxCount: 4, baseDmg: 20, dmgStep: 10, 
+                speed: 3, cd: 4000 
+            },
+            wave: { 
+                id: 'wave', name: "ショックウェーブ", type: 'active',
+                desc: "周囲の敵を弾き飛ばす波動",
+                maxCount: 3, baseDmg: 15, dmgStep: 8, 
+                range: 200, cd: 6000, knockback: 60
+            }
+        };
+
+        // --- Model Helper ---
+        function createHumanoidGroup(mainMaterialTemplate, scale = 1.0, withSword = false, withGun = false) {
             const group = new THREE.Group();
-            
-            // マテリアルを複製して、個体ごとに独立させる (ダメージ発光用)
             const mainMaterial = mainMaterialTemplate.clone();
             const skinMat = MAT.skin.clone();
             const hairMat = MAT.hair.clone();
             const pantsMat = MAT.pants.clone();
+            const eyeMat = MAT.eye.clone();
 
-            // --- 頭部 ---
             const headGroup = new THREE.Group();
             headGroup.position.y = 15;
             group.add(headGroup);
-
-            // 顔
             const face = new THREE.Mesh(new THREE.BoxGeometry(8, 8, 8), skinMat);
             face.castShadow = true;
             headGroup.add(face);
-
-            // 髪 (帽子のように)
-            const hairGeo = new THREE.BoxGeometry(8.5, 2.5, 8.5);
-            const hair = new THREE.Mesh(hairGeo, hairMat);
+            const hair = new THREE.Mesh(new THREE.BoxGeometry(8.5, 2.5, 8.5), hairMat);
             hair.position.y = 3;
             hair.castShadow = true;
             headGroup.add(hair);
-            
-            // 目
             const eyeGeo = new THREE.BoxGeometry(2, 2, 1);
-            const eyeL = new THREE.Mesh(eyeGeo, MAT.eye);
+            const eyeL = new THREE.Mesh(eyeGeo, eyeMat);
             eyeL.position.set(-2, 0, 4.1);
             headGroup.add(eyeL);
-            const eyeR = new THREE.Mesh(eyeGeo, MAT.eye);
+            const eyeR = new THREE.Mesh(eyeGeo, eyeMat);
             eyeR.position.set(2, 0, 4.1);
             headGroup.add(eyeR);
 
-            // --- 胴体 ---
             const body = new THREE.Mesh(new THREE.BoxGeometry(8, 10, 4), mainMaterial);
-            body.position.y = 6;
-            body.castShadow = true;
+            body.position.y = 6; body.name = "Torso"; body.castShadow = true;
             group.add(body);
 
-            // --- 腕 (関節あり風) ---
             const armGeo = new THREE.BoxGeometry(2.5, 9, 2.5);
+            const armLGroup = new THREE.Group(); armLGroup.position.set(-5.5, 10, 0); armLGroup.name = "ArmL"; group.add(armLGroup);
+            const armL = new THREE.Mesh(armGeo, mainMaterial); armL.position.y = -3; armL.castShadow = true; armLGroup.add(armL);
+            const handL = new THREE.Mesh(new THREE.BoxGeometry(2.5, 2.5, 2.5), skinMat); handL.position.y = -8.5; armLGroup.add(handL);
             
-            // 左腕
-            const armLGroup = new THREE.Group();
-            armLGroup.position.set(-5.5, 10, 0); // 肩の位置
-            group.add(armLGroup);
-            
-            const armL = new THREE.Mesh(armGeo, mainMaterial);
-            armL.position.y = -3;
-            armL.castShadow = true;
-            armLGroup.add(armL);
-            
-            const handL = new THREE.Mesh(new THREE.BoxGeometry(2.5, 2.5, 2.5), skinMat);
-            handL.position.y = -8.5; // 手先
-            handL.castShadow = true;
-            armLGroup.add(handL);
-            
-            // 右腕
-            const armRGroup = new THREE.Group();
-            armRGroup.position.set(5.5, 10, 0);
-            group.add(armRGroup);
-            
-            const armR = new THREE.Mesh(armGeo, mainMaterial);
-            armR.position.y = -3;
-            armR.castShadow = true;
-            armRGroup.add(armR);
-            
-            const handR = new THREE.Mesh(new THREE.BoxGeometry(2.5, 2.5, 2.5), skinMat);
-            handR.position.y = -8.5;
-            handR.castShadow = true;
-            armRGroup.add(handR);
+            const armRGroup = new THREE.Group(); armRGroup.position.set(5.5, 10, 0); armRGroup.name = "ArmR"; group.add(armRGroup);
+            const armR = new THREE.Mesh(armGeo, mainMaterial); armR.position.y = -3; armR.castShadow = true; armRGroup.add(armR);
+            const handR = new THREE.Mesh(new THREE.BoxGeometry(2.5, 2.5, 2.5), skinMat); handR.position.y = -8.5; armRGroup.add(handR);
 
-            // 剣モデル (オプション)
+            const legGeo = new THREE.BoxGeometry(3.2, 10, 3.2);
+            const legLGroup = new THREE.Group(); legLGroup.position.set(-2.2, 1, 0); legLGroup.name = "LegL"; group.add(legLGroup);
+            const legL = new THREE.Mesh(legGeo, pantsMat); legL.position.y = -5; legL.castShadow = true; legLGroup.add(legL);
+            const legRGroup = new THREE.Group(); legRGroup.position.set(2.2, 1, 0); legRGroup.name = "LegR"; group.add(legRGroup);
+            const legR = new THREE.Mesh(legGeo, pantsMat); legR.position.y = -5; legR.castShadow = true; legRGroup.add(legR);
+
             if (withSword) {
                 const swordGroup = new THREE.Group();
-                swordGroup.position.set(0, -8.5, 2); 
-                swordGroup.rotation.x = Math.PI / 2; // 前に向ける
-                
-                // 刃
+                swordGroup.position.set(0, -8.5, 2); swordGroup.rotation.x = Math.PI / 2; 
                 const blade = new THREE.Mesh(new THREE.BoxGeometry(2, 16, 0.5), MAT.sword);
-                blade.position.y = 8;
-                blade.castShadow = true;
-                swordGroup.add(blade);
-                // 柄
+                blade.position.y = 8; blade.castShadow = true; swordGroup.add(blade);
                 const handle = new THREE.Mesh(new THREE.BoxGeometry(1, 4, 1), MAT.swordHandle);
-                handle.position.y = -2;
-                handle.castShadow = true;
-                swordGroup.add(handle);
-                // 鍔
+                handle.position.y = -2; handle.castShadow = true; swordGroup.add(handle);
                 const guard = new THREE.Mesh(new THREE.BoxGeometry(4, 1, 1), MAT.sword);
-                guard.position.y = 0;
-                guard.castShadow = true;
-                swordGroup.add(guard);
-
-                armRGroup.add(swordGroup);
-                
-                // 剣オブジェクトに名前をつけて後で参照しやすくする
-                swordGroup.name = "Sword";
-                swordGroup.visible = false; // 初期状態は非表示（ロジックで制御）
+                guard.position.y = 0; guard.castShadow = true; swordGroup.add(guard);
+                armRGroup.add(swordGroup); swordGroup.name = "Sword"; swordGroup.visible = false;
             }
 
-            // --- 脚 (関節あり風) ---
-            const legGeo = new THREE.BoxGeometry(3.2, 10, 3.2);
-            
-            // 左足
-            const legLGroup = new THREE.Group();
-            legLGroup.position.set(-2.2, 1, 0); // 股関節
-            group.add(legLGroup);
-            
-            const legL = new THREE.Mesh(legGeo, pantsMat);
-            legL.position.y = -5;
-            legL.castShadow = true;
-            legLGroup.add(legL);
+            if (withGun) {
+                const gunGroup = new THREE.Group();
+                gunGroup.position.set(0, -8.5, 2); 
+                const barrel = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 8), MAT.gunEnemy);
+                barrel.position.z = 4;
+                gunGroup.add(barrel);
+                armRGroup.add(gunGroup);
+                gunGroup.name = "Gun";
+            }
 
-            // 右足
-            const legRGroup = new THREE.Group();
-            legRGroup.position.set(2.2, 1, 0);
-            group.add(legRGroup);
-            
-            const legR = new THREE.Mesh(legGeo, pantsMat);
-            legR.position.y = -5;
-            legR.castShadow = true;
-            legRGroup.add(legR);
-
-            // 名前をつけてアニメーションで参照できるようにする
-            armLGroup.name = "ArmL";
-            armRGroup.name = "ArmR";
-            legLGroup.name = "LegL";
-            legRGroup.name = "LegR";
-
-            group.scale.set(scale, scale, scale);
-            return group;
+            group.scale.set(scale, scale, scale); return group;
         }
 
         function createDoorGroup(material) {
             const group = new THREE.Group();
-            const w = 40, h = 50, d = 4;
-            
-            const sideGeo = new THREE.BoxGeometry(4, h, 6);
-            const topGeo = new THREE.BoxGeometry(w + 8, 4, 6);
-            
-            const leftPost = new THREE.Mesh(sideGeo, MAT.doorFrame);
-            leftPost.position.set(-(w/2 + 2), h/2, 0);
-            leftPost.castShadow = true;
-            group.add(leftPost);
-
-            const rightPost = new THREE.Mesh(sideGeo, MAT.doorFrame);
-            rightPost.position.set(w/2 + 2, h/2, 0);
-            rightPost.castShadow = true;
-            group.add(rightPost);
-
-            const topPost = new THREE.Mesh(topGeo, MAT.doorFrame);
-            topPost.position.set(0, h + 2, 0);
-            topPost.castShadow = true;
-            group.add(topPost);
-
-            const panel = new THREE.Mesh(new THREE.BoxGeometry(w, h, 2), material);
-            panel.position.set(0, h/2, 0);
-            group.add(panel);
-
-            const knob = new THREE.Mesh(new THREE.SphereGeometry(2), MAT.doorKnob);
-            knob.position.set(15, h/2, 2.5);
-            group.add(knob);
-
+            const w = 40, h = 50;
+            const sideGeo = new THREE.BoxGeometry(4, h, 6); const topGeo = new THREE.BoxGeometry(w + 8, 4, 6);
+            const left = new THREE.Mesh(sideGeo, MAT.doorFrame); left.position.set(-(w/2+2), h/2, 0);
+            const right = new THREE.Mesh(sideGeo, MAT.doorFrame); right.position.set(w/2+2, h/2, 0);
+            const top = new THREE.Mesh(topGeo, MAT.doorFrame); top.position.set(0, h+2, 0);
+            group.add(left, right, top);
+            const panel = new THREE.Mesh(new THREE.BoxGeometry(w, h, 2), material); panel.position.set(0, h/2, 0); group.add(panel);
+            const knob = new THREE.Mesh(new THREE.SphereGeometry(2), MAT.doorKnob); knob.position.set(15, h/2, 2.5); group.add(knob);
             return group;
         }
 
-        /**
-         * ゲームクラス
-         */
+        // --- Game Classes ---
+        class Bullet {
+            constructor(x, y, angle, isEnemy = false) {
+                this.x = x; this.y = y; this.r = 5; 
+                this.isEnemy = isEnemy;
+                this.speed = isEnemy ? 6 : 12; // 敵弾は速度6
+                
+                this.vx = Math.cos(angle) * this.speed; 
+                this.vy = Math.sin(angle) * this.speed;
+                this.mesh = new THREE.Mesh(GEO.bullet, isEnemy ? MAT.enemyBullet : MAT.bullet);
+                this.mesh.scale.set(12, 12, 12); 
+                this.mesh.position.set(x, 15, y);
+            }
+            update() {
+                this.x += this.vx; this.y += this.vy;
+                this.mesh.position.x = this.x; this.mesh.position.z = this.y;
+            }
+        }
+
+        class SkillProjectile {
+            constructor(type, x, y, data, player, skillRef) {
+                this.type = type;
+                this.x = x; this.y = y;
+                this.life = 0;
+                this.data = data; // {damage, count, etc}
+                this.player = player;
+                this.skillRef = skillRef; // Reference to skill object for stats
+                this.dead = false;
+
+                if (type === 'orb') {
+                    this.r = 10;
+                    this.mesh = new THREE.Mesh(GEO.orb, MAT.skillOrb);
+                    this.angleOffset = (data.index / data.total) * Math.PI * 2;
+                    this.orbitRadius = 80;
+                    this.duration = SKILL_DEFS.orb.duration;
+                } else if (type === 'slash') {
+                    this.r = 20;
+                    this.mesh = new THREE.Mesh(GEO.straightSlash, MAT.skillSlash);
+                    this.mesh.rotation.x = -Math.PI / 2;
+                    let baseAngle = Math.atan2(game.mouse.y - player.y, game.mouse.x - player.x);
+                    if (data.index === 1) baseAngle += Math.PI;
+                    if (data.index === 2) baseAngle -= Math.PI / 2;
+                    if (data.index === 3) baseAngle += Math.PI / 2;
+                    this.vx = Math.cos(baseAngle) * SKILL_DEFS.slash.speed;
+                    this.vy = Math.sin(baseAngle) * SKILL_DEFS.slash.speed;
+                    this.mesh.rotation.z = -baseAngle;
+                    this.duration = 3000; // Fly for 3s
+                } else if (type === 'wave') {
+                    this.r = 10; // Growing radius
+                    this.maxR = SKILL_DEFS.wave.range;
+                    this.mesh = new THREE.Mesh(new THREE.RingGeometry(1, 5, 32), MAT.skillWave);
+                    this.mesh.rotation.x = -Math.PI / 2;
+                    this.duration = 500;
+                    this.expandSpeed = this.maxR / (this.duration / 16);
+                }
+                
+                this.mesh.position.set(x, 15, y);
+                this.spawnTime = Date.now();
+            }
+
+            update() {
+                const elapsed = Date.now() - this.spawnTime;
+                if (elapsed > this.duration) {
+                    this.dead = true;
+                    return;
+                }
+
+                if (this.type === 'orb') {
+                    const speed = 0.005;
+                    const currentAngle = this.angleOffset + elapsed * speed;
+                    this.x = this.player.x + Math.cos(currentAngle) * this.orbitRadius;
+                    this.y = this.player.y + Math.sin(currentAngle) * this.orbitRadius;
+                    this.mesh.rotation.y += 0.1;
+                    this.mesh.rotation.z += 0.1;
+                } else if (this.type === 'slash') {
+                    this.x += this.vx;
+                    this.y += this.vy;
+                } else if (this.type === 'wave') {
+                    this.r += this.expandSpeed;
+                    this.mesh.geometry.dispose();
+                    this.mesh.geometry = new THREE.RingGeometry(this.r, this.r + 15, 32);
+                    this.mesh.material.opacity = 1 - (elapsed / this.duration);
+                    this.x = this.player.x;
+                }
+
+                this.mesh.position.x = this.x;
+                this.mesh.position.z = this.y;
+            }
+        }
+
+        class Item {
+            constructor(x, y, type, value) {
+                this.x = x; this.y = y; this.r = 10;
+                this.type = type; this.value = value;
+                this.mesh = new THREE.Mesh(GEO.item, type === 'gold' ? MAT.gold : MAT.point);
+                this.mesh.scale.set(12, 12, 12); this.mesh.position.set(x, 10, y);
+                this.indicator = null;
+            }
+            update() {
+                this.mesh.position.x = this.x; this.mesh.position.z = this.y;
+                this.mesh.rotation.y += 0.05; this.mesh.rotation.z += 0.05;
+            }
+            updateIndicator(camera) {
+                if (this.type !== 'gold') return;
+                const container = $('indicator-container');
+                const v = new THREE.Vector3(this.x, 10, this.y);
+                v.project(camera);
+                const isOffScreen = v.x < -0.9 || v.x > 0.9 || v.y < -0.9 || v.y > 0.9;
+                if (isOffScreen || v.z > 1) {
+                    if (!this.indicator) {
+                        this.indicator = document.createElement('div');
+                        this.indicator.className = 'indicator gold-ind';
+                        container.appendChild(this.indicator);
+                    }
+                    this.indicator.style.display = 'block';
+                    let angle = Math.atan2(v.y, v.x);
+                    if (v.z > 1) angle += Math.PI;
+                    const radius = Math.min(window.innerWidth, window.innerHeight) / 2 - 20;
+                    const tx = (window.innerWidth/2) + Math.cos(angle) * radius;
+                    const ty = (window.innerHeight/2) - Math.sin(angle) * radius;
+                    this.indicator.style.left = `${tx}px`; this.indicator.style.top = `${ty}px`;
+                    this.indicator.style.transform = `translate(-50%, -50%)`;
+                } else { if (this.indicator) this.indicator.style.display = 'none'; }
+            }
+            removeIndicator() { if (this.indicator) { this.indicator.remove(); this.indicator = null; } }
+        }
+
+        class Enemy {
+            constructor(x, y, hpMulti, speedMulti, type = 'normal') {
+                this.x = x; this.y = y; 
+                this.type = type; // 'normal', 'boss', 'ranged'
+                this.r = type === 'boss' ? 30 : 15;
+                
+                let scale = 1.1;
+                let mat = MAT.enemy;
+                let hpBase = 30;
+
+                if (type === 'boss') {
+                    scale = 3.0;
+                    mat = MAT.boss;
+                    hpBase = 500; // Boss HP
+                    speedMulti *= 0.6; // Boss is slower
+                } else if (type === 'ranged') {
+                    mat = MAT.enemy; // Same color but has gun
+                    hpBase = 20; // Lower HP
+                    speedMulti *= 0.9;
+                }
+
+                this.maxHp = hpBase * hpMulti; 
+                this.hp = this.maxHp;
+                this.speed = (0.8 + Math.random() * 0.7) * speedMulti;
+                
+                // Ranged behavior
+                this.lastShot = 0;
+                this.fireRate = 1200; // 1.2秒
+                this.attackRange = 400;
+
+                this.mesh = createHumanoidGroup(mat, scale, false, type === 'ranged');
+                this.mesh.position.set(x, 11 * scale, y);
+                this.parts = { armL: this.mesh.getObjectByName("ArmL"), armR: this.mesh.getObjectByName("ArmR"), legL: this.mesh.getObjectByName("LegL"), legR: this.mesh.getObjectByName("LegR") };
+                this.indicator = null;
+                this.hitImmunity = 0; 
+            }
+            update(player, game) {
+                if (this.hitImmunity > 0) this.hitImmunity--;
+                const dx = player.x - this.x; const dy = player.y - this.y;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                
+                let move = true;
+                if (this.type === 'ranged') {
+                    // 距離が近ければ逃げる、適正なら止まる、遠ければ近づく
+                    if (dist < 200) {
+                        // 逃げる
+                        this.x -= (dx / dist) * this.speed; this.y -= (dy / dist) * this.speed;
+                    } else if (dist < this.attackRange) {
+                        move = false;
+                        // Shoot
+                        const now = Date.now();
+                        if (now - this.lastShot > this.fireRate) {
+                            this.lastShot = now;
+                            const angle = Math.atan2(player.y - this.y, player.x - this.x);
+                            const b = new Bullet(this.x, this.y, angle, true); // Enemy Bullet
+                            game.bullets.push(b);
+                            game.scene.add(b.mesh);
+                            
+                            if (this.parts.armR) {
+                                this.parts.armR.rotation.x = -Math.PI / 2;
+                                setTimeout(() => { if(this.parts.armR) this.parts.armR.rotation.x = 0; }, 200);
+                            }
+                        }
+                    } else {
+                        // 近づく
+                        this.x += (dx / dist) * this.speed; this.y += (dy / dist) * this.speed;
+                    }
+                } else {
+                    // Normal / Boss behavior
+                    if (dist > 0) {
+                        this.x += (dx / dist) * this.speed; this.y += (dy / dist) * this.speed;
+                    }
+                }
+
+                if (move) {
+                    const time = Date.now() * 0.015;
+                    if(this.parts.armL) this.parts.armL.rotation.x = Math.sin(time) * 0.5;
+                    if(this.parts.armR && this.type !== 'ranged') this.parts.armR.rotation.x = -Math.sin(time) * 0.5;
+                    if(this.parts.legL) this.parts.legL.rotation.x = -Math.sin(time) * 0.5;
+                    if(this.parts.legR) this.parts.legR.rotation.x = Math.sin(time) * 0.5;
+                }
+
+                this.mesh.position.x = this.x; this.mesh.position.z = this.y;
+                this.mesh.lookAt(player.x, this.mesh.position.y, player.y);
+            }
+            takeDamage(amt) {
+                this.hp -= amt;
+                const baseScale = this.type === 'boss' ? 3.0 : 1.1;
+                this.mesh.scale.set(baseScale * 1.2, baseScale * 1.2, baseScale * 1.2); 
+                setTimeout(() => this.mesh.scale.set(baseScale, baseScale, baseScale), 50);
+                this.mesh.traverse(child => {
+                    if (child.isMesh && child.material && child.material.isMeshStandardMaterial) {
+                        child.material.emissive.setHex(0xffaaaa);
+                        setTimeout(() => { if (child && child.material && child.material.emissive) child.material.emissive.setHex(0x000000); }, 100);
+                    }
+                });
+            }
+            recoil(fromX, fromY, force = 30) {
+                if (this.type === 'boss') return; // Boss doesn't recoil
+                const angle = Math.atan2(this.y - fromY, this.x - fromX);
+                this.x += Math.cos(angle) * force; this.y += Math.sin(angle) * force;
+                this.mesh.position.x = this.x; this.mesh.position.z = this.y;
+            }
+            updateIndicator(camera) {
+                const container = $('indicator-container');
+                const v = new THREE.Vector3(this.x, 10, this.y); v.project(camera);
+                const isOffScreen = v.x < -0.9 || v.x > 0.9 || v.y < -0.9 || v.y > 0.9;
+                if (isOffScreen || v.z > 1) {
+                    if (!this.indicator) { 
+                        this.indicator = document.createElement('div'); 
+                        this.indicator.className = 'indicator enemy-ind'; 
+                        if (this.type === 'boss') this.indicator.classList.add('boss-ind');
+                        container.appendChild(this.indicator); 
+                    }
+                    this.indicator.style.display = 'block';
+                    let angle = Math.atan2(v.y, v.x); if (v.z > 1) angle += Math.PI;
+                    const radius = Math.min(window.innerWidth, window.innerHeight) / 2 - 30;
+                    const tx = (window.innerWidth/2) + Math.cos(angle) * radius;
+                    const ty = (window.innerHeight/2) - Math.sin(angle) * radius; 
+                    this.indicator.style.left = `${tx}px`; this.indicator.style.top = `${ty}px`;
+                    const deg = -(angle * 180 / Math.PI) + 90;
+                    this.indicator.style.transform = `translate(-50%, -50%) rotate(${deg}deg)`;
+                } else { if (this.indicator) this.indicator.style.display = 'none'; }
+            }
+            removeIndicator() { if (this.indicator) { this.indicator.remove(); this.indicator = null; } }
+        }
+
+        class Effect {
+            constructor(x, y, angle) {
+                this.life = 1.0;
+                this.mesh = new THREE.Mesh(GEO.slash, MAT.slash.clone());
+                this.mesh.position.set(x, 12, y);
+                this.mesh.rotation.x = -Math.PI / 2; this.mesh.rotation.z = -angle; 
+                this.mesh.position.x += Math.cos(angle) * 20; this.mesh.position.z += Math.sin(angle) * 20;
+            }
+            update() { this.life -= 0.15; this.mesh.material.opacity = this.life; }
+        }
+
+        class Player {
+            constructor(x, y, maxHp, atk, scene) {
+                this.x = x; this.y = y; this.r = 15;
+                this.maxHp = maxHp; this.hp = maxHp; this.atk = atk;
+                this.speed = 2.5; this.lastAttack = 0; this.fireRate = 600; this.weapon = 'gun';
+                this.mesh = createHumanoidGroup(MAT.player, 1.0, true);
+                this.mesh.position.set(x, 10, y); 
+                this.parts = { armL: this.mesh.getObjectByName("ArmL"), armR: this.mesh.getObjectByName("ArmR"), legL: this.mesh.getObjectByName("LegL"), legR: this.mesh.getObjectByName("LegR"), sword: this.mesh.getObjectByName("Sword") };
+            }
+            setWeapon(wep) { this.weapon = wep; if (this.parts.sword) this.parts.sword.visible = (wep === 'sword'); }
+            update(keys, mouse, walls) {
+                let dx = 0, dy = 0;
+                if (keys['KeyW'] || keys['ArrowUp']) dy = -1;
+                if (keys['KeyS'] || keys['ArrowDown']) dy = 1;
+                if (keys['KeyA'] || keys['ArrowLeft']) dx = -1;
+                if (keys['KeyD'] || keys['ArrowRight']) dx = 1;
+                const isMoving = (dx !== 0 || dy !== 0);
+                if (isMoving) {
+                    const len = Math.sqrt(dx*dx + dy*dy); dx /= len; dy /= len;
+                    const nextX = this.x + dx * this.speed; const nextY = this.y + dy * this.speed;
+                    let colX = false, colY = false;
+                    const pRectX = {x: nextX-this.r, y: this.y-this.r, w: this.r*2, h: this.r*2};
+                    const pRectY = {x: this.x-this.r, y: nextY-this.r, w: this.r*2, h: this.r*2};
+                    for (let w of walls) { if (checkRectCollide(pRectX, w)) colX = true; if (checkRectCollide(pRectY, w)) colY = true; }
+                    if (!colX) this.x = nextX; if (!colY) this.y = nextY;
+                    const time = Date.now() * 0.015;
+                    if(this.parts.armL) this.parts.armL.rotation.x = Math.sin(time) * 0.5;
+                    if(Date.now() - this.lastAttack > this.fireRate/2) { if(this.parts.armR) this.parts.armR.rotation.x = -Math.sin(time) * 0.5; }
+                    if(this.parts.legL) this.parts.legL.rotation.x = -Math.sin(time) * 0.5;
+                    if(this.parts.legR) this.parts.legR.rotation.x = Math.sin(time) * 0.5;
+                } else {
+                    if(this.parts.armL) this.parts.armL.rotation.x = 0;
+                    if(Date.now() - this.lastAttack > this.fireRate/2) { if(this.parts.armR) this.parts.armR.rotation.x = 0; }
+                    if(this.parts.legL) this.parts.legL.rotation.x = 0;
+                    if(this.parts.legR) this.parts.legR.rotation.x = 0;
+                }
+                this.mesh.position.x = this.x; this.mesh.position.z = this.y;
+                this.mesh.lookAt(mouse.x, 10, mouse.y);
+                if (this.weapon === 'sword' && Date.now() - this.lastAttack < 200) {
+                    if (this.parts.armR) { this.parts.armR.rotation.x = -Math.PI / 2; const progress = (Date.now() - this.lastAttack) / 200; this.parts.armR.rotation.y = -Math.PI / 4 + progress * Math.PI / 2; }
+                } else if (this.weapon === 'sword') { if(this.parts.armR) { this.parts.armR.rotation.x = 0; this.parts.armR.rotation.y = 0; } }
+            }
+            attack() {
+                const now = Date.now();
+                if (now - this.lastAttack < this.fireRate) return;
+                this.lastAttack = now;
+                if (this.weapon === 'gun') {
+                    const angle = Math.atan2(game.mouse.y - this.y, game.mouse.x - this.x);
+                    const b = new Bullet(this.x, this.y, angle, false); // Player bullet
+                    game.bullets.push(b); game.scene.add(b.mesh);
+                } else if (this.weapon === 'sword') {
+                    const range = 100; const arc = Math.PI / 1.5; 
+                    const facingAngle = Math.atan2(game.mouse.y - this.y, game.mouse.x - this.x);
+                    const slash = new Effect(this.x, this.y, facingAngle);
+                    game.effects.push(slash); game.scene.add(slash.mesh);
+                    for (let i = game.enemies.length - 1; i >= 0; i--) {
+                        const e = game.enemies[i];
+                        const dist = Math.hypot(e.x - this.x, e.y - this.y);
+                        if (dist < range) {
+                            let angleToEnemy = Math.atan2(e.y - this.y, e.x - this.x);
+                            let diff = angleToEnemy - facingAngle;
+                            while (diff > Math.PI) diff -= Math.PI * 2; while (diff < -Math.PI) diff += Math.PI * 2;
+                            if (Math.abs(diff) < arc / 2) {
+                                e.takeDamage(this.atk * 1.5); e.recoil(this.x, this.y);
+                                if (e.hp <= 0) game.killEnemy(e, i);
+                            }
+                        }
+                    }
+                }
+            }
+            takeDamage(amt) {
+                this.hp -= amt;
+                this.mesh.traverse(child => {
+                    if (child.isMesh && child.material && child.material.isMeshStandardMaterial) {
+                        child.material.emissive.setHex(0xff0000);
+                        setTimeout(() => { if (child.material && child.material.emissive) child.material.emissive.setHex(0x000000); }, 100);
+                    }
+                });
+            }
+        }
+
         class Game {
             constructor() {
                 this.initThree();
-                
                 this.state = 'SAFE_ZONE';
                 this.wave = 1;
                 this.difficultyMultiplier = 1;
-                
                 this.keys = {};
                 this.mouse = { x: 0, y: 0, down: false };
                 this.raycaster = new THREE.Raycaster();
                 this.setupInput();
 
-                // エンティティ
                 this.player = null;
                 this.enemies = [];
                 this.bullets = [];
+                this.skillProjectiles = [];
                 this.items = [];
-                this.effects = []; // エフェクト管理用
-                this.walls = []; // ロジック壁
+                this.effects = [];
+                this.walls = [];
                 this.interactables = [];
-                this.interactableMeshes = []; // 3D表示用
+                this.interactableMeshes = [];
                 
                 this.metaData = this.loadMetaData();
-                // 現在のランデータ
+                this.canUpgrade = true; // 強化可能フラグ
+                // Skills data: [{id: 'orb', count: 1, damageLvl: 0, assignedKey: 'Z', lastUse: 0}]
                 this.runData = { 
-                    gold: 1000, 
-                    pointsGainedRun: 0,
-                    unlockedWeapons: ['gun'], // 初期武器
-                    currentWeapon: 'gun' 
+                    gold: 0, pointsGainedRun: 0, 
+                    unlockedWeapons: ['gun'], currentWeapon: 'gun',
+                    skills: [] 
                 };
 
                 this.initSafeZone();
@@ -408,86 +805,57 @@
                 this.scene = new THREE.Scene();
                 this.scene.background = new THREE.Color(0x050505);
                 this.scene.fog = new THREE.FogExp2(0x050505, 0.0015);
-
                 this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 5000);
-                this.camera.position.set(0, 400, 300);
-                this.camera.lookAt(0, 0, 0);
-
+                this.camera.position.set(0, 400, 300); this.camera.lookAt(0, 0, 0);
                 this.renderer = new THREE.WebGLRenderer({ antialias: true });
                 this.renderer.setSize(window.innerWidth, window.innerHeight);
-                this.renderer.shadowMap.enabled = true;
-                container.appendChild(this.renderer.domElement);
-
-                // Lighting
-                const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
-                this.scene.add(ambientLight);
-
-                this.dirLight = new THREE.DirectionalLight(0xffffff, 0.7);
-                this.dirLight.position.set(100, 200, 100);
-                this.dirLight.castShadow = true;
-                // 影の範囲を広げて、途切れ（枠線に見える現象）を防止
-                this.dirLight.shadow.camera.top = 2000;
-                this.dirLight.shadow.camera.bottom = -2000;
-                this.dirLight.shadow.camera.left = -2000;
-                this.dirLight.shadow.camera.right = 2000;
-                this.dirLight.shadow.mapSize.width = 2048;
-                this.dirLight.shadow.mapSize.height = 2048;
+                this.renderer.shadowMap.enabled = true; container.appendChild(this.renderer.domElement);
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.4); this.scene.add(ambientLight);
+                this.dirLight = new THREE.DirectionalLight(0xffffff, 0.7); this.dirLight.position.set(100, 200, 100);
+                this.dirLight.castShadow = true; 
+                this.dirLight.shadow.camera.top = 2000; this.dirLight.shadow.camera.bottom = -2000;
+                this.dirLight.shadow.camera.left = -2000; this.dirLight.shadow.camera.right = 2000;
+                this.dirLight.shadow.mapSize.width = 2048; this.dirLight.shadow.mapSize.height = 2048;
                 this.scene.add(this.dirLight);
-
-                this.playerLight = new THREE.PointLight(0xffffff, 0.5, 500);
-                this.scene.add(this.playerLight);
-
-                window.addEventListener('resize', () => {
-                    this.camera.aspect = window.innerWidth / window.innerHeight;
-                    this.camera.updateProjectionMatrix();
-                    this.renderer.setSize(window.innerWidth, window.innerHeight);
-                });
-
+                this.playerLight = new THREE.PointLight(0xffffff, 0.5, 500); this.scene.add(this.playerLight);
+                window.addEventListener('resize', () => { this.camera.aspect = window.innerWidth / window.innerHeight; this.camera.updateProjectionMatrix(); this.renderer.setSize(window.innerWidth, window.innerHeight); });
                 this.planeGeometry = new THREE.PlaneGeometry(10000, 10000);
                 this.plane = new THREE.Mesh(this.planeGeometry, new THREE.MeshBasicMaterial({ visible: false }));
-                this.plane.rotation.x = -Math.PI / 2;
-                this.scene.add(this.plane);
+                this.plane.rotation.x = -Math.PI / 2; this.scene.add(this.plane);
             }
 
             setupInput() {
-                window.addEventListener('keydown', e => this.keys[e.code] = true);
+                window.addEventListener('keydown', e => {
+                    this.keys[e.code] = true;
+                    if (this.state === 'PLAYING') {
+                        // Skill Keys
+                        const keyMap = {'KeyZ': 0, 'KeyX': 1, 'KeyC': 2, 'KeyV': 3, 'KeyB': 4};
+                        if (e.code in keyMap) {
+                            this.useSkill(keyMap[e.code]);
+                        }
+                    }
+                });
                 window.addEventListener('keyup', e => this.keys[e.code] = false);
-                
                 window.addEventListener('mousemove', e => {
                     const rect = this.renderer.domElement.getBoundingClientRect();
                     const x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
                     const y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-                    
                     this.raycaster.setFromCamera({ x, y }, this.camera);
                     const intersects = this.raycaster.intersectObject(this.plane);
-                    if (intersects.length > 0) {
-                        this.mouse.x = intersects[0].point.x;
-                        this.mouse.y = intersects[0].point.z; 
-                    }
+                    if (intersects.length > 0) { this.mouse.x = intersects[0].point.x; this.mouse.y = intersects[0].point.z; }
                 });
-
-                window.addEventListener('mousedown', (e) => {
-                    // UI要素のクリックは除外
-                    if (e.target.closest('button') || e.target.closest('.interactive-ui')) return;
-                    this.mouse.down = true;
-                    if (this.state === 'PLAYING' && this.player) this.player.attack();
-                });
+                window.addEventListener('mousedown', (e) => { if (e.target.closest('button') || e.target.closest('.interactive-ui')) return; this.mouse.down = true; if (this.state === 'PLAYING' && this.player) this.player.attack(); });
                 window.addEventListener('mouseup', () => this.mouse.down = false);
             }
 
-            // --- 状態管理 & ロード/セーブ ---
-
-            loadMetaData() {
-                const data = localStorage.getItem(STORAGE_KEY_META);
-                return data ? JSON.parse(data) : { points: 0, maxHpLevel: 0, atkLevel: 0 };
+            loadMetaData() { 
+                const data = localStorage.getItem(STORAGE_KEY_META); 
+                // Default skills slots = 3
+                const def = { points: 0, maxHpLevel: 0, atkLevel: 0, skillSlotLevel: 0, totemCount: 0 }; 
+                return data ? { ...def, ...JSON.parse(data) } : def; 
             }
-
-            saveMetaData() {
-                localStorage.setItem(STORAGE_KEY_META, JSON.stringify(this.metaData));
-            }
-
+            saveMetaData() { localStorage.setItem(STORAGE_KEY_META, JSON.stringify(this.metaData)); }
             hasSaveData() { return localStorage.getItem(STORAGE_KEY_SAVE) !== null; }
-
             loadSaveGame() {
                 const save = JSON.parse(localStorage.getItem(STORAGE_KEY_SAVE));
                 if (!save) return;
@@ -496,395 +864,606 @@
                 this.runData.pointsGainedRun = save.pointsGainedRun;
                 this.runData.unlockedWeapons = save.unlockedWeapons || ['gun'];
                 this.runData.currentWeapon = save.currentWeapon || 'gun';
+                this.runData.skills = save.skills || [];
                 this.difficultyMultiplier = 1 + (this.wave * 0.1);
-                
                 this.tempLoadStats = save.player;
                 this.startBattlePhase(true);
             }
 
-            // --- シーン構築 ---
+            saveRunData() {
+                const saveData = {
+                    wave: this.wave, gold: this.runData.gold, pointsGainedRun: this.runData.pointsGainedRun,
+                    unlockedWeapons: this.runData.unlockedWeapons, currentWeapon: this.runData.currentWeapon,
+                    player: { maxHp: this.player.maxHp, hp: this.player.hp, atk: this.player.atk, speed: this.player.speed, fireRate: this.player.fireRate },
+                    skills: this.runData.skills
+                };
+                localStorage.setItem(STORAGE_KEY_SAVE, JSON.stringify(saveData));
+            }
 
             clearEntities() {
                 if (this.player && this.player.mesh) this.scene.remove(this.player.mesh);
-                this.enemies.forEach(e => this.scene.remove(e.mesh));
+                this.enemies.forEach(e => { this.scene.remove(e.mesh); e.removeIndicator(); });
                 this.bullets.forEach(b => this.scene.remove(b.mesh));
-                this.items.forEach(i => this.scene.remove(i.mesh));
+                this.skillProjectiles.forEach(p => this.scene.remove(p.mesh));
+                this.items.forEach(i => { this.scene.remove(i.mesh); i.removeIndicator(); });
                 this.effects.forEach(e => this.scene.remove(e.mesh));
                 this.interactableMeshes.forEach(m => this.scene.remove(m));
                 if (this.currentFloorMesh) this.scene.remove(this.currentFloorMesh);
-
-                this.enemies = [];
-                this.bullets = [];
-                this.items = [];
-                this.effects = [];
-                this.interactables = [];
-                this.interactableMeshes = [];
-                this.walls = [];
+                this.enemies = []; this.bullets = []; this.skillProjectiles = []; this.items = []; this.effects = []; this.interactables = []; this.interactableMeshes = []; this.walls = [];
+                $('indicator-container').innerHTML = '';
             }
 
             initSafeZone() {
-                this.state = 'SAFE_ZONE';
-                this.clearEntities();
-
+                this.state = 'SAFE_ZONE'; this.clearEntities();
                 const roomW = 400, roomH = 300;
-
-                // 1. 床
                 const floorGeo = new THREE.BoxGeometry(roomW, 10, roomH);
                 this.currentFloorMesh = new THREE.Mesh(floorGeo, MAT.floorSafe);
-                this.currentFloorMesh.position.set(0, -5, 0);
-                this.currentFloorMesh.receiveShadow = true;
-                this.scene.add(this.currentFloorMesh);
+                this.currentFloorMesh.position.set(0, -5, 0); this.currentFloorMesh.receiveShadow = true; this.scene.add(this.currentFloorMesh);
 
-                // 2. プレイヤー
                 const baseMaxHp = 100 + (this.metaData.maxHpLevel * 10);
                 const baseAtk = 10 + (this.metaData.atkLevel * 2);
                 this.player = new Player(0, 0, baseMaxHp, baseAtk);
-                // セーフゾーンで武器を表示
+                // Reset to saved weapon or default if not in run
+                // Here we keep currentWeapon if just returned, or load from meta if needed (meta doesn't store currentWeapon yet, so let's keep runData for session)
                 this.player.setWeapon(this.runData.currentWeapon);
                 this.scene.add(this.player.mesh);
 
-                // 3. 壁 (ロジック)
-                this.walls.push({x: -2000, y: -2000, w: 4000, h: 2000 - roomH/2}); // 上
-                this.walls.push({x: -2000, y: roomH/2, w: 4000, h: 2000}); // 下
-                this.walls.push({x: -2000, y: -roomH/2, w: 2000 - roomW/2, h: roomH}); // 左
-                this.walls.push({x: roomW/2, y: -roomH/2, w: 2000, h: roomH}); // 右
+                this.walls.push({x: -2000, y: -2000, w: 4000, h: 2000 - roomH/2});
+                this.walls.push({x: -2000, y: roomH/2, w: 4000, h: 2000});
+                this.walls.push({x: -2000, y: -roomH/2, w: 2000 - roomW/2, h: roomH});
+                this.walls.push({x: roomW/2, y: -roomH/2, w: 2000, h: roomH});
+                const wallThick = 10, wallH = 40;
+                const createWall = (x, z, w, d) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, wallH, d), MAT.wall); m.position.set(x, wallH/2, z); m.castShadow = true; this.scene.add(m); this.interactableMeshes.push(m); };
+                createWall(0, -roomH/2 - wallThick/2, roomW + wallThick*2, wallThick); createWall(0, roomH/2 + wallThick/2, roomW + wallThick*2, wallThick);
+                createWall(-roomW/2 - wallThick/2, 0, wallThick, roomH); createWall(roomW/2 + wallThick/2, 0, wallThick, roomH);
 
-                // 4. 壁 (3Dビジュアル)
-                const wallThick = 10;
-                const wallH = 40;
-                const createWall = (x, z, w, d) => {
-                    const m = new THREE.Mesh(new THREE.BoxGeometry(w, wallH, d), MAT.wall);
-                    m.position.set(x, wallH/2, z);
-                    m.castShadow = true;
-                    this.scene.add(m);
-                    this.interactableMeshes.push(m);
-                };
-                createWall(0, -roomH/2 - wallThick/2, roomW + wallThick*2, wallThick);
-                createWall(0, roomH/2 + wallThick/2, roomW + wallThick*2, wallThick);
-                createWall(-roomW/2 - wallThick/2, 0, wallThick, roomH);
-                createWall(roomW/2 + wallThick/2, 0, wallThick, roomH);
-
-                // 5. NPC (強化トレーナー)
                 this.interactables.push({ type: 'npc', x: -100, y: -60, r: 20, action: () => this.openNpcMenu() });
-                const npcMesh = createHumanoidGroup(MAT.npc, 1.2); 
-                npcMesh.position.set(-100, 12, -60); 
-                npcMesh.lookAt(0, 12, 0); 
-                this.scene.add(npcMesh);
-                this.interactableMeshes.push(npcMesh);
+                const npcMesh = createHumanoidGroup(MAT.npc, 1.2); npcMesh.position.set(-100, 12, -60); npcMesh.lookAt(0, 12, 0); this.scene.add(npcMesh); this.interactableMeshes.push(npcMesh);
+                const carpet = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.MeshStandardMaterial({color: 0x7f1d1d})); carpet.rotation.x = -Math.PI/2; carpet.position.set(-100, 0.2, -60); this.scene.add(carpet); this.interactableMeshes.push(carpet);
 
-                const carpet = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.MeshStandardMaterial({color: 0x7f1d1d}));
-                carpet.rotation.x = -Math.PI/2;
-                carpet.position.set(-100, 0.2, -60);
-                this.scene.add(carpet);
-                this.interactableMeshes.push(carpet);
-
-                // 6. NPC (武器職人 Smith) - 追加
                 this.interactables.push({ type: 'smith', x: -100, y: 60, r: 20, action: () => this.openWeaponMenu() });
-                const smithMesh = createHumanoidGroup(MAT.smith, 1.2); 
-                smithMesh.position.set(-100, 12, 60); 
-                smithMesh.lookAt(0, 12, 0); 
-                this.scene.add(smithMesh);
-                this.interactableMeshes.push(smithMesh);
+                const smithMesh = createHumanoidGroup(MAT.smith, 1.2); smithMesh.position.set(-100, 12, 60); smithMesh.lookAt(0, 12, 0); this.scene.add(smithMesh); this.interactableMeshes.push(smithMesh);
+                const carpetSmith = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.MeshStandardMaterial({color: 0xD97706})); carpetSmith.rotation.x = -Math.PI/2; carpetSmith.position.set(-100, 0.2, 60); this.scene.add(carpetSmith); this.interactableMeshes.push(carpetSmith);
 
-                const carpetSmith = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.MeshStandardMaterial({color: 0xD97706}));
-                carpetSmith.rotation.x = -Math.PI/2;
-                carpetSmith.position.set(-100, 0.2, 60);
-                this.scene.add(carpetSmith);
-                this.interactableMeshes.push(carpetSmith);
+                // Save Point (Monolith)
+                this.interactables.push({ type: 'save', x: 100, y: 0, r: 25, action: () => this.manualSave() });
+                const saveMesh = new THREE.Mesh(GEO.savePoint, MAT.savePoint);
+                saveMesh.position.set(100, 20, 0);
+                // Rotate animation in update loop or just here static for simplicity (add to interactableMeshes for raycast logic if we used raycast interaction, but we use distance check)
+                this.scene.add(saveMesh); this.interactableMeshes.push(saveMesh);
+                // Floating text for save point
+                /* (Simplified: no text mesh here, just glowing crystal) */
 
-                // 7. ドア (New Game)
                 this.interactables.push({ type: 'door', x: -25, y: -140, w: 50, h: 20, action: () => this.startNewGame() });
-                const doorMesh = createDoorGroup(MAT.doorStart);
-                doorMesh.position.set(0, 0, -148);
-                this.scene.add(doorMesh);
-                this.interactableMeshes.push(doorMesh);
+                const doorMesh = createDoorGroup(MAT.doorStart); doorMesh.position.set(0, 0, -148); this.scene.add(doorMesh); this.interactableMeshes.push(doorMesh);
                 
-                // 8. ドア (Load Game)
                 if (this.hasSaveData()) {
                     this.interactables.push({ type: 'door', x: 100, y: -140, w: 50, h: 20, action: () => this.loadSaveGame() });
-                    const loadMesh = createDoorGroup(MAT.doorLoad);
-                    loadMesh.position.set(125, 0, -148);
-                    this.scene.add(loadMesh);
-                    this.interactableMeshes.push(loadMesh);
+                    const loadMesh = createDoorGroup(MAT.doorLoad); loadMesh.position.set(125, 0, -148); this.scene.add(loadMesh); this.interactableMeshes.push(loadMesh);
                 }
 
-                // UI Reset
-                $('hud').classList.add('hidden');
-                $('waveMenu').classList.add('hidden');
-                $('npcMenu').classList.add('hidden');
-                $('weaponSmithMenu').classList.add('hidden');
-                $('gameOverMenu').classList.add('hidden');
+                $('hud').classList.add('hidden'); $('waveMenu').classList.add('hidden'); $('npcMenu').classList.add('hidden'); $('weaponSmithMenu').classList.add('hidden'); $('gameOverMenu').classList.add('hidden'); $('reviveMenu').classList.add('hidden'); $('skillBar').classList.add('hidden');
+                this.updateSkillHud(); // Reset UI
             }
 
             startNewGame() {
                 localStorage.removeItem(STORAGE_KEY_SAVE);
-                this.wave = 1;
-                this.difficultyMultiplier = 1;
-                this.runData = { gold: 0, pointsGainedRun: 0, unlockedWeapons: ['gun'], currentWeapon: 'gun' };
+                this.wave = 1; this.difficultyMultiplier = 1;
+                this.runData = { gold: 0, pointsGainedRun: 0, unlockedWeapons: ['gun'], currentWeapon: 'gun', skills: [] };
                 this.tempLoadStats = null;
+                this.canUpgrade = true; // 厳密には不要かもしれないが念のため
                 this.startBattlePhase();
             }
 
             startBattlePhase(isLoad = false) {
-                this.state = 'PLAYING';
-                this.clearEntities();
-
-                // バトルフィールド
+                this.state = 'PLAYING'; this.clearEntities();
                 const fieldSize = 1500;
                 this.currentFloorMesh = new THREE.Mesh(new THREE.PlaneGeometry(fieldSize, fieldSize), MAT.floorBattle);
-                this.currentFloorMesh.rotation.x = -Math.PI / 2;
-                this.currentFloorMesh.receiveShadow = true;
-                this.scene.add(this.currentFloorMesh);
+                this.currentFloorMesh.rotation.x = -Math.PI / 2; this.currentFloorMesh.receiveShadow = true; this.scene.add(this.currentFloorMesh);
 
-                // グリッドヘルパーを削除（見た目をスッキリさせるため）
-                // const grid = new THREE.GridHelper(fieldSize, 30, 0x2f4f4f, 0x2f4f4f);
-                // grid.position.y = 0.1;
-                // this.currentFloorMesh.add(grid);
+                const w = 100; const limit = 750;
+                this.walls.push({x: -limit - w, y: -limit - w, w: limit*2 + w*2, h: w});
+                this.walls.push({x: -2000, y: -2000, w: 4000, h: 2000 - limit});
+                this.walls.push({x: -2000, y: limit, w: 4000, h: 2000});
+                this.walls.push({x: -2000, y: -limit, w: 2000 - limit, h: limit*2});
+                this.walls.push({x: limit, y: -limit, w: 2000, h: limit*2});
 
-                // ステージ境界の壁 (不可視) を追加
-                const w = 100;
-                const limit = 750; // fieldSize / 2
-                this.walls.push({x: -limit - w, y: -limit - w, w: limit*2 + w*2, h: w}); // 上
-                this.walls.push({x: -2000, y: -2000, w: 4000, h: 2000 - limit}); // 上の黒い部分カバー
-                this.walls.push({x: -2000, y: limit, w: 4000, h: 2000}); // 下
-                this.walls.push({x: -2000, y: -limit, w: 2000 - limit, h: limit*2}); // 左
-                this.walls.push({x: limit, y: -limit, w: 2000, h: limit*2}); // 右
-
-                // プレイヤー再配置
                 const baseMaxHp = 100 + (this.metaData.maxHpLevel * 10);
                 const baseAtk = 10 + (this.metaData.atkLevel * 2);
                 this.player = new Player(0, 0, baseMaxHp, baseAtk);
-                
                 if (this.tempLoadStats) {
-                    this.player.hp = this.tempLoadStats.hp;
-                    this.player.atk = this.tempLoadStats.atk;
-                    this.player.maxHp = this.tempLoadStats.maxHp;
-                    this.player.speed = this.tempLoadStats.speed;
-                    if(this.tempLoadStats.fireRate) this.player.fireRate = this.tempLoadStats.fireRate; // 攻撃速度引き継ぎ
+                    this.player.hp = this.tempLoadStats.hp; this.player.atk = this.tempLoadStats.atk;
+                    this.player.maxHp = this.tempLoadStats.maxHp; this.player.speed = this.tempLoadStats.speed;
+                    if(this.tempLoadStats.fireRate) this.player.fireRate = this.tempLoadStats.fireRate;
                     this.tempLoadStats = null;
                 }
                 this.player.setWeapon(this.runData.currentWeapon);
-
                 this.scene.add(this.player.mesh);
-
-                $('hud').classList.remove('hidden');
-                this.updateHud();
-
-                if (!isLoad) this.spawnWave();
-                else setTimeout(() => this.spawnWave(), 1000);
+                $('hud').classList.remove('hidden'); $('skillBar').classList.remove('hidden');
+                this.updateHud(); this.updateSkillHud();
+                if (!isLoad) this.spawnWave(); else setTimeout(() => this.spawnWave(), 1000);
             }
 
             spawnWave() {
-                const enemyCount = 5 + Math.floor(this.wave * 1.5);
-                const speedMulti = 1 + (this.wave * 0.05);
+                const isBossWave = this.wave % 10 === 0;
                 const hpMulti = 1 + (this.wave * 0.1);
+                const speedMulti = 1 + (this.wave * 0.05);
 
+                let enemyCount = 5 + Math.floor(this.wave * 1.5);
+                if (isBossWave) enemyCount = 3; // Reduce trash mobs for boss wave
+
+                // Spawn Normal / Ranged
                 for (let i = 0; i < enemyCount; i++) {
-                    const angle = Math.random() * Math.PI * 2;
-                    const dist = 400 + Math.random() * 200;
-                    const ex = this.player.x + Math.cos(angle) * dist;
-                    const ey = this.player.y + Math.sin(angle) * dist;
+                    const angle = Math.random() * Math.PI * 2; const dist = 400 + Math.random() * 200;
+                    const ex = this.player.x + Math.cos(angle) * dist; const ey = this.player.y + Math.sin(angle) * dist;
                     
-                    const enemy = new Enemy(ex, ey, hpMulti, speedMulti);
-                    this.enemies.push(enemy);
-                    this.scene.add(enemy.mesh);
+                    let type = 'normal';
+                    // Wave 11+ spawn ranged
+                    if (this.wave >= 11 && Math.random() < 0.3) type = 'ranged';
+                    
+                    const enemy = new Enemy(ex, ey, hpMulti, speedMulti, type);
+                    this.enemies.push(enemy); this.scene.add(enemy.mesh);
                 }
-                this.showNotification(`WAVE ${this.wave} START!`);
+
+                // Spawn Boss
+                if (isBossWave) {
+                    const angle = Math.random() * Math.PI * 2; 
+                    const dist = 600;
+                    const ex = this.player.x + Math.cos(angle) * dist; 
+                    const ey = this.player.y + Math.sin(angle) * dist;
+                    const boss = new Enemy(ex, ey, hpMulti, speedMulti, 'boss');
+                    this.enemies.push(boss); this.scene.add(boss.mesh);
+                    this.showNotification(`BOSS WAVE ${this.wave}!`);
+                } else {
+                    this.showNotification(`WAVE ${this.wave} START!`);
+                }
+                
                 this.updateHud();
             }
 
-            // --- ゲームループ & ロジック ---
-
-            animate() {
-                requestAnimationFrame(() => this.animate());
-                this.update();
-                this.render();
-            }
+            animate() { requestAnimationFrame(() => this.animate()); this.update(); this.render(); }
 
             update() {
                 if (this.state !== 'PLAYING' && this.state !== 'SAFE_ZONE') return;
+                const now = Date.now();
 
-                // プレイヤー更新
+                // Skill Cooldown UI Update
+                if (this.state === 'PLAYING') {
+                     this.runData.skills.forEach((skill, idx) => {
+                         const def = SKILL_DEFS[skill.id];
+                         const elapsed = now - (skill.lastUse || 0);
+                         const remaining = Math.max(0, def.cd - elapsed);
+                         const el = $(`skill-cd-${idx}`);
+                         if(el) el.style.height = (remaining / def.cd * 100) + '%';
+                     });
+                }
+
                 if (this.player) {
                     this.player.update(this.keys, this.mouse, this.walls);
-                    
-                    const targetX = this.player.x;
-                    const targetZ = this.player.y + 300; 
+                    const targetX = this.player.x; const targetZ = this.player.y + 300; 
                     this.camera.position.x += (targetX - this.camera.position.x) * 0.1;
                     this.camera.position.z += (targetZ - this.camera.position.z) * 0.1;
-                    // 固定アングル
-                    // this.camera.lookAt(this.player.x, 0, this.player.y);
-
                     this.playerLight.position.set(this.player.x, 50, this.player.y);
                 }
 
-                // 弾更新
+                // Bullets
                 for (let i = this.bullets.length - 1; i >= 0; i--) {
-                    const b = this.bullets[i];
-                    b.update();
-                    if (Math.abs(b.x - this.player.x) > 1200 || Math.abs(b.y - this.player.y) > 1200) {
-                        this.scene.remove(b.mesh);
-                        this.bullets.splice(i, 1);
-                        continue;
-                    }
+                    const b = this.bullets[i]; b.update();
+                    if (Math.abs(b.x - this.player.x) > 1200 || Math.abs(b.y - this.player.y) > 1200) { this.scene.remove(b.mesh); this.bullets.splice(i, 1); continue; }
+                    
                     if (this.state === 'PLAYING') {
-                        for (let j = this.enemies.length - 1; j >= 0; j--) {
-                            const e = this.enemies[j];
-                            if (checkCircleCollide(b, e)) {
-                                e.takeDamage(this.player.atk);
-                                this.scene.remove(b.mesh);
-                                this.bullets.splice(i, 1);
-                                if (e.hp <= 0) this.killEnemy(e, j);
-                                break;
+                        if (b.isEnemy) {
+                            // Enemy bullet hits Player
+                            if (checkCircleCollide(b, this.player)) {
+                                this.player.takeDamage(15 * this.difficultyMultiplier); // higher dmg
+                                this.scene.remove(b.mesh); this.bullets.splice(i, 1);
+                                this.updateHud();
+                                if (this.player.hp <= 0) this.handleGameOver();
+                                continue;
+                            }
+                        } else {
+                            // Player bullet hits Enemy
+                            for (let j = this.enemies.length - 1; j >= 0; j--) {
+                                const e = this.enemies[j];
+                                if (checkCircleCollide(b, e)) {
+                                    e.takeDamage(this.player.atk); this.scene.remove(b.mesh); this.bullets.splice(i, 1);
+                                    if (e.hp <= 0) this.killEnemy(e, j); break;
+                                }
                             }
                         }
                     }
                 }
 
-                // 敵更新
+                // Skill Projectiles
+                for (let i = this.skillProjectiles.length - 1; i >= 0; i--) {
+                    const p = this.skillProjectiles[i];
+                    p.update();
+                    
+                    if (this.state === 'PLAYING') {
+                        // ガード: p.type が SKILL_DEFS に存在するか確認
+                        if (!p.type || !SKILL_DEFS[p.type]) continue;
+
+                        const def = SKILL_DEFS[p.type];
+                        const dmg = def.baseDmg + (p.skillRef.damageLvl * def.dmgStep);
+
+                        for (let j = this.enemies.length - 1; j >= 0; j--) {
+                            const e = this.enemies[j];
+                            if (e.hitImmunity > 0) continue; 
+
+                            let hit = false;
+                            if (p.type === 'orb') hit = checkCircleCollide({x:p.x, y:p.y, r:p.r}, e);
+                            else if (p.type === 'slash') hit = checkCircleCollide({x:p.x, y:p.y, r:p.r}, e);
+                            else if (p.type === 'wave') {
+                                const dist = Math.hypot(e.x - p.x, e.y - p.y);
+                                hit = dist < p.r && dist > p.r - 20; 
+                            }
+
+                            if (hit) {
+                                e.takeDamage(dmg);
+                                if (p.type === 'wave') e.recoil(p.x, p.y, def.knockback);
+                                e.hitImmunity = 10; 
+                                if (e.hp <= 0) this.killEnemy(e, j);
+                            }
+                        }
+                    }
+
+                    if (p.dead) {
+                        this.scene.remove(p.mesh);
+                        this.skillProjectiles.splice(i, 1);
+                    }
+                }
+
+                // Enemies
                 if (this.state === 'PLAYING') {
                     for (let i = 0; i < this.enemies.length; i++) {
                         const e = this.enemies[i];
-                        e.update(this.player);
+                        e.update(this.player, this); e.updateIndicator(this.camera);
                         if (checkCircleCollide(e, this.player)) {
-                            this.player.takeDamage(10 * this.difficultyMultiplier);
-                            e.recoil(this.player);
-                            this.updateHud();
+                            this.player.takeDamage(10 * this.difficultyMultiplier); e.recoil(this.player.x, this.player.y); this.updateHud();
                             if (this.player.hp <= 0) this.handleGameOver();
                         }
                     }
                 }
 
-                // アイテム収集
+                // Items
                 for (let i = this.items.length - 1; i >= 0; i--) {
-                    const item = this.items[i];
-                    item.update();
+                    const item = this.items[i]; item.update(); item.updateIndicator(this.camera);
                     const dist = Math.hypot(this.player.x - item.x, this.player.y - item.y);
-                    if (dist < 150) { 
-                        item.x += (this.player.x - item.x) * 0.1;
-                        item.y += (this.player.y - item.y) * 0.1;
-                    }
+                    if (dist < 150) { item.x += (this.player.x - item.x) * 0.1; item.y += (this.player.y - item.y) * 0.1; }
                     if (dist < 30) {
-                        if (item.type === 'gold') {
-                            this.runData.gold += item.value;
-                            this.showNotification(`+${item.value} G`);
-                        } else {
-                            this.runData.pointsGainedRun += item.value;
-                        }
-                        this.scene.remove(item.mesh);
-                        this.items.splice(i, 1);
-                        this.updateHud();
+                        if (item.type === 'gold') { this.runData.gold += item.value; this.showNotification(`+${item.value} G`); } 
+                        else { this.runData.pointsGainedRun += item.value; }
+                        this.scene.remove(item.mesh); item.removeIndicator(); this.items.splice(i, 1); this.updateHud();
                     }
                 }
 
-                // エフェクト更新
+                // Effects
                 for (let i = this.effects.length - 1; i >= 0; i--) {
-                    const eff = this.effects[i];
-                    eff.update();
-                    if (eff.life <= 0) {
-                        this.scene.remove(eff.mesh);
-                        this.effects.splice(i, 1);
-                    }
+                    const eff = this.effects[i]; eff.update();
+                    if (eff.life <= 0) { this.scene.remove(eff.mesh); this.effects.splice(i, 1); }
                 }
 
-                // インタラクション
+                // Interactables
                 if (this.state === 'SAFE_ZONE') {
                     for (let obj of this.interactables) {
-                        if (obj.type === 'door') {
-                            if (checkRectCollide({x:this.player.x-15, y:this.player.y-15, w:30, h:30}, obj)) obj.action();
-                        } else {
-                            const dist = Math.hypot(this.player.x - obj.x, this.player.y - obj.y);
-                            if (dist < 40) obj.action();
+                        if (!obj) continue; // ガード
+                        if (obj.type === 'door') { if (checkRectCollide({x:this.player.x-15, y:this.player.y-15, w:30, h:30}, obj)) obj.action(); }
+                        else { 
+                            const dist = Math.hypot(this.player.x - obj.x, this.player.y - obj.y); 
+                            if (dist < (obj.r + 15)) obj.action(); 
                         }
+                    }
+                    // Rotate save point (より安全な検索)
+                    const saveMesh = this.interactableMeshes.find(m => {
+                        return m && m.geometry && m.geometry.type === 'OctahedronGeometry';
+                    });
+                    if(saveMesh) {
+                        saveMesh.rotation.y += 0.02;
+                        saveMesh.rotation.z += 0.01;
                     }
                 }
             }
 
-            render() {
-                this.renderer.render(this.scene, this.camera);
-            }
-
-            // --- ゲームプレイイベント ---
+            render() { this.renderer.render(this.scene, this.camera); }
 
             killEnemy(enemy, index) {
-                this.scene.remove(enemy.mesh);
-                this.enemies.splice(index, 1);
+                this.scene.remove(enemy.mesh); enemy.removeIndicator(); this.enemies.splice(index, 1);
                 
-                // お金はドロップする
-                const gold = new Item(enemy.x, enemy.y, 'gold', Math.floor(random(10, 30)));
-                this.items.push(gold);
-                this.scene.add(gold.mesh);
+                // Drop more for boss
+                let drops = 1;
+                if(enemy.type === 'boss') drops = 10;
+                
+                for(let k=0; k<drops; k++) {
+                    const gx = enemy.x + (Math.random()-0.5)*20; 
+                    const gy = enemy.y + (Math.random()-0.5)*20;
+                    const val = enemy.type === 'boss' ? 100 : Math.floor(random(10, 30));
+                    const gold = new Item(gx, gy, 'gold', val); 
+                    this.items.push(gold); this.scene.add(gold.mesh);
+                }
 
-                // ポイントは自動取得（ドロップしない）
-                const pts = Math.floor(random(5, 15));
-                this.runData.pointsGainedRun += pts;
-                this.updateHud(); // HUDを即座に更新
+                const pts = enemy.type === 'boss' ? 500 : Math.floor(random(5, 15)); 
+                this.runData.pointsGainedRun += pts; this.updateHud(); 
+                
+                if (this.enemies.length === 0) { setTimeout(() => { this.openWaveMenu(); }, 1000); }
+            }
 
-                if (this.enemies.length === 0) {
-                    setTimeout(() => {
-                        this.openWaveMenu();
-                    }, 1000);
+            // --- Skills Logic ---
+            useSkill(slotIndex) {
+                const skill = this.runData.skills[slotIndex];
+                if (!skill) return;
+                const def = SKILL_DEFS[skill.id];
+                const now = Date.now();
+                if (now - (skill.lastUse || 0) < def.cd) {
+                    return; // Cooldown
+                }
+                
+                skill.lastUse = now;
+                this.showNotification(`${def.name} 発動!`);
+
+                // Spawn Projectiles
+                if (skill.id === 'orb') {
+                    for (let i = 0; i < skill.count; i++) {
+                        const p = new SkillProjectile('orb', this.player.x, this.player.y, {index: i, total: skill.count}, this.player, skill);
+                        this.skillProjectiles.push(p); this.scene.add(p.mesh);
+                    }
+                } else if (skill.id === 'slash') {
+                    for (let i = 0; i < skill.count; i++) {
+                        const p = new SkillProjectile('slash', this.player.x, this.player.y, {index: i}, this.player, skill);
+                        this.skillProjectiles.push(p); this.scene.add(p.mesh);
+                    }
+                } else if (skill.id === 'wave') {
+                    for (let i = 0; i < skill.count; i++) {
+                        setTimeout(() => {
+                            const p = new SkillProjectile('wave', this.player.x, this.player.y, {}, this.player, skill);
+                            this.skillProjectiles.push(p); this.scene.add(p.mesh);
+                        }, i * 200);
+                    }
                 }
             }
+
+            updateSkillHud() {
+                const bar = $('skillBar');
+                bar.innerHTML = '';
+                
+                // Max slots based on meta upgrade (Base 3 + upgrades)
+                // Default 3 slots, can upgrade to 5
+                const maxSlots = 3 + (this.metaData.skillSlotLevel || 0);
+                
+                for(let i=0; i<maxSlots; i++) {
+                    const skill = this.runData.skills[i];
+                    const div = document.createElement('div');
+                    div.className = 'skill-slot';
+                    div.innerHTML = `<span class="skill-key">${SKILL_KEYS[i]}</span>`;
+                    
+                    if (skill) {
+                        const def = SKILL_DEFS[skill.id];
+                        const icon = document.createElement('span');
+                        icon.innerText = def.name.charAt(0);
+                        div.appendChild(icon);
+                        
+                        const overlay = document.createElement('div');
+                        overlay.id = `skill-cd-${i}`;
+                        overlay.className = 'skill-cd-overlay';
+                        div.appendChild(overlay);
+                        
+                        if(skill.id === 'orb') div.style.borderColor = '#00FFFF';
+                        if(skill.id === 'slash') div.style.borderColor = '#AAFFAA';
+                        if(skill.id === 'wave') div.style.borderColor = '#FF00FF';
+                    } else {
+                        div.style.opacity = 0.3;
+                    }
+                    bar.appendChild(div);
+                }
+            }
+
+            // --- Menu Logic ---
 
             openWaveMenu() {
                 $('waveMenu').classList.remove('hidden');
                 $('menuWaveNum').innerText = this.wave;
-                $('saveSection').classList.toggle('hidden', this.wave % 10 !== 0);
                 
-                // ショップ武器エリア更新
-                const area = $('shopWeaponArea');
-                area.innerHTML = '';
-                // 剣を持っていない場合
-                if (!this.runData.unlockedWeapons.includes('sword')) {
+                // Show choice container, hide post-wave controls
+                $('choiceContainer').classList.remove('hidden');
+                $('choiceContainer').style.display = 'flex';
+                $('postWaveControls').classList.add('hidden');
+                $('postWaveControls').style.display = 'none';
+                $('waveMenuSubtitle').innerText = "報酬を選択してください";
+                
+                const container = $('choiceContainer');
+                container.innerHTML = '';
+
+                // Generate 3 choices
+                const choices = this.generateChoices();
+                
+                choices.forEach(choice => {
+                    const card = document.createElement('div');
+                    card.className = "choice-card bg-gray-800 border-2 border-gray-600 p-4 rounded-lg w-64 text-center flex flex-col items-center justify-between";
+                    
+                    let html = `<h3 class="text-xl font-bold mb-2 ${choice.color}">${choice.title}</h3>`;
+                    html += `<p class="text-gray-300 text-sm mb-4 h-16">${choice.desc}</p>`;
+                    
+                    // Show stats
+                    if (choice.type !== 'heal' && choice.type !== 'gold') {
+                        html += `<div class="text-xs text-gray-400 mb-2">現在のレベル: ${choice.currentLvl || 0}</div>`;
+                    }
+                    
+                    card.innerHTML = html;
+                    
                     const btn = document.createElement('button');
-                    btn.className = "bg-orange-700 hover:bg-orange-600 text-white p-2 rounded flex justify-between items-center text-sm w-full";
-                    btn.innerHTML = '<span>剣 (Sword) 解放</span><span class="text-yellow-300 font-bold">1000 G</span>';
-                    btn.onclick = () => this.shopBuy('unlock_sword');
-                    area.appendChild(btn);
+                    btn.className = "bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded mt-2 w-full";
+                    btn.innerText = "選択";
+                    btn.onclick = () => {
+                        choice.action();
+                        // Instead of nextWave, show intermission only on wave 10, 20...
+                        if (this.wave % 10 === 0) {
+                            this.showWaveIntermission();
+                        } else {
+                            this.nextWave();
+                        }
+                    };
+                    card.appendChild(btn);
+
+                    container.appendChild(card);
+                });
+            }
+
+            showWaveIntermission() {
+                $('choiceContainer').style.display = 'none';
+                $('postWaveControls').style.display = 'flex';
+                $('postWaveControls').classList.remove('hidden');
+                $('waveMenuSubtitle').innerText = "行動を選択してください";
+            }
+
+            generateChoices() {
+                const options = [];
+                const ownedIds = this.runData.skills.map(s => s.id);
+                const maxSlots = 3 + (this.metaData.skillSlotLevel || 0);
+                
+                // 1. New Skills (if slots available)
+                if (this.runData.skills.length < maxSlots) {
+                    for (let key in SKILL_DEFS) {
+                        if (!ownedIds.includes(key)) {
+                            options.push({
+                                type: 'new_skill',
+                                id: key,
+                                title: `習得: ${SKILL_DEFS[key].name}`,
+                                desc: SKILL_DEFS[key].desc,
+                                color: 'text-yellow-400',
+                                action: () => {
+                                    this.runData.skills.push({
+                                        id: key, count: 1, damageLvl: 0, lastUse: 0
+                                    });
+                                    this.updateSkillHud();
+                                }
+                            });
+                        }
+                    }
+                }
+
+                // 2. Upgrades for owned skills
+                this.runData.skills.forEach(skill => {
+                    const def = SKILL_DEFS[skill.id];
+                    // Upgrade Count
+                    if (skill.count < def.maxCount) {
+                        options.push({
+                            type: 'upgrade_count',
+                            title: `${def.name}: 数増加`,
+                            desc: `発射数を +1 します (現在: ${skill.count})`,
+                            color: 'text-green-400',
+                            currentLvl: skill.count,
+                            action: () => skill.count++
+                        });
+                    }
+                    // Upgrade Damage
+                    options.push({
+                        type: 'upgrade_dmg',
+                        title: `${def.name}: 威力強化`,
+                        desc: `攻撃力を +${def.dmgStep} します`,
+                        color: 'text-red-400',
+                        currentLvl: skill.damageLvl,
+                        action: () => skill.damageLvl++
+                    });
+                });
+
+                // 3. Fallback/Generic Options (Heal, Gold)
+                const genericOptions = [
+                    {
+                        type: 'heal', title: 'HP全回復', desc: 'HPを100%回復します', color: 'text-green-500',
+                        action: () => { this.player.hp = this.player.maxHp; this.updateHud(); }
+                    },
+                    {
+                        type: 'stat_atk', title: '攻撃力アップ', desc: '基本攻撃力を +2 します', color: 'text-red-500',
+                        action: () => { this.player.atk += 2; this.updateHud(); }
+                    }
+                ];
+
+                // Shuffle & Pick 3
+                const pool = [...options, ...genericOptions];
+                // Fisher-Yates shuffle
+                for (let i = pool.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [pool[i], pool[j]] = [pool[j], pool[i]];
+                }
+                
+                return pool.slice(0, 3);
+            }
+
+            nextWave() { $('waveMenu').classList.add('hidden'); this.wave++; this.state = 'PLAYING'; this.spawnWave(); }
+
+            handleGameOver() {
+                if (this.state === 'REVIVE_CONFIRM') return;
+
+                // Check Totem
+                if ((this.metaData.totemCount || 0) > 0) {
+                    this.state = 'REVIVE_CONFIRM';
+                    $('reviveTotemCount').innerText = this.metaData.totemCount;
+                    $('reviveMenu').classList.remove('hidden');
                 } else {
-                    // 購入済みなら切り替えボタン
-                    const btn = document.createElement('button');
-                    const nextWep = this.runData.currentWeapon === 'gun' ? 'sword' : 'gun';
-                    const label = nextWep === 'gun' ? '銃' : '剣';
-                    btn.className = "bg-gray-700 hover:bg-gray-600 text-white p-2 rounded text-center text-sm w-full";
-                    btn.innerHTML = `装備切り替え: ${label}へ`;
-                    btn.onclick = () => this.switchWeapon(nextWep);
-                    area.appendChild(btn);
+                    this.confirmGameOver();
                 }
             }
 
-            nextWave() {
-                $('waveMenu').classList.add('hidden');
-                this.wave++;
-                this.state = 'PLAYING';
-                this.spawnWave();
+            useTotem() {
+                if (this.metaData.totemCount > 0) {
+                    this.metaData.totemCount--;
+                    this.saveMetaData();
+                    this.updateNpcMenu();
+                    
+                    // Revive Logic
+                    $('reviveMenu').classList.add('hidden');
+                    this.state = 'PLAYING';
+                    this.player.hp = this.player.maxHp;
+                    this.updateHud();
+                    this.showNotification("不死のトーテムを使用しました！");
+                    
+                    // Push enemies back slightly
+                    this.enemies.forEach(e => e.recoil(this.player.x, this.player.y, 200));
+                } else {
+                    this.confirmGameOver();
+                }
             }
 
-            handleGameOver() {
-                this.state = 'GAME_OVER';
+            confirmGameOver() {
+                this.state = 'GAME_OVER'; 
+                $('reviveMenu').classList.add('hidden');
                 localStorage.removeItem(STORAGE_KEY_SAVE);
-                this.metaData.points += this.runData.pointsGainedRun;
-                this.saveMetaData();
-                $('goPoints').innerText = this.runData.pointsGainedRun;
-                $('gameOverMenu').classList.remove('hidden');
+                this.metaData.points += this.runData.pointsGainedRun; this.saveMetaData();
+                
+                // コイン没収 & 強化可能に
+                this.runData.gold = 0; 
+                this.canUpgrade = true; 
+
+                $('goPoints').innerText = this.runData.pointsGainedRun; $('gameOverMenu').classList.remove('hidden');
                 setTimeout(() => this.initSafeZone(), 3000);
             }
 
             saveAndQuit() {
-                const saveData = {
-                    wave: this.wave, gold: this.runData.gold, pointsGainedRun: this.runData.pointsGainedRun,
-                    unlockedWeapons: this.runData.unlockedWeapons,
-                    currentWeapon: this.runData.currentWeapon,
-                    player: { maxHp: this.player.maxHp, hp: this.player.hp, atk: this.player.atk, speed: this.player.speed, fireRate: this.player.fireRate }
-                };
-                localStorage.setItem(STORAGE_KEY_SAVE, JSON.stringify(saveData));
-                this.initSafeZone();
-                this.showNotification("保存しました");
+                this.returnToSafeZone(); // Deprecated logic, now just return
             }
 
-            // --- UI関連 ---
-            
+            returnToSafeZone() {
+                // Add points gained in this run to meta points
+                this.metaData.points += this.runData.pointsGainedRun;
+                this.runData.pointsGainedRun = 0;
+                this.saveMetaData();
+
+                // SAVE RUN DATA! This allows loading from purple door
+                // Increment wave so we start at next one
+                this.wave++; 
+                this.saveRunData(); 
+                
+                this.canUpgrade = false; // 生存帰還時は強化不可
+
+                $('waveMenu').classList.add('hidden');
+                this.showNotification(`帰還しました。進行状況を保存。`);
+                this.initSafeZone();
+            }
+
+            manualSave() {
+                this.saveMetaData();
+                this.showNotification("記録しました (セーブ完了)");
+            }
+
             updateHud() {
                 $('waveDisplay').innerText = this.wave;
                 $('hpDisplay').innerText = `${Math.ceil(this.player.hp)}/${this.player.maxHp}`;
@@ -895,380 +1474,117 @@
             }
 
             showNotification(msg) {
-                const el = $('notification');
-                el.innerText = msg;
-                el.style.opacity = 1;
-                el.style.transform = 'translate(-50%, 0)';
-                setTimeout(() => {
-                    el.style.opacity = 0;
-                    el.style.transform = 'translate(-50%, 10px)';
-                }, 2000);
+                const el = $('notification'); el.innerText = msg; el.style.opacity = 1; el.style.transform = 'translate(-50%, 0)';
+                setTimeout(() => { el.style.opacity = 0; el.style.transform = 'translate(-50%, 10px)'; }, 2000);
             }
 
-            shopBuy(type) {
-                const costs = { heal: 50, atk: 100, speed: 150, atk_speed: 200, unlock_sword: 1000 };
-                
-                if (this.runData.gold >= costs[type]) {
-                    let bought = false;
-                    if (type === 'heal' && this.player.hp < this.player.maxHp) {
-                        this.player.hp = Math.min(this.player.maxHp, this.player.hp + this.player.maxHp * 0.5); bought = true;
-                    } else if (type === 'atk') { this.player.atk++; bought = true; }
-                    else if (type === 'speed') { this.player.speed += 0.2; bought = true; }
-                    else if (type === 'atk_speed') { 
-                        // 攻撃速度短縮 (下限100ms)
-                        if (this.player.fireRate > 100) {
-                            this.player.fireRate -= 50; 
-                            if (this.player.fireRate < 100) this.player.fireRate = 100;
-                            bought = true; 
-                        } else {
-                            this.showNotification("これ以上早くなりません");
-                            return;
-                        }
-                    }
-                    else if (type === 'unlock_sword') {
-                        this.runData.unlockedWeapons.push('sword');
-                        bought = true;
-                        this.openWaveMenu(); // メニュー更新
-                    }
-
-                    if (bought) {
-                        this.runData.gold -= costs[type];
-                        this.updateHud();
-                        this.showNotification("購入！");
-                    }
-                } else this.showNotification("お金が足りません");
-            }
+            shopBuy(type) { /* Legacy Shop unused in wave menu, but kept for logic if needed later */ }
 
             switchWeapon(wep) {
-                this.runData.currentWeapon = wep;
-                this.player.setWeapon(wep);
-                this.updateHud();
-                this.openWaveMenu(); // ショップメニュー更新
-                if(this.state === 'SAFE_ZONE') this.openWeaponMenu(); // 武器職人メニュー更新
+                this.runData.currentWeapon = wep; this.player.setWeapon(wep); this.updateHud();
+                if(this.state === 'MENU') this.openWeaponMenu();
             }
 
-            openNpcMenu() { this.state = 'MENU'; $('npcMenu').classList.remove('hidden'); this.updateNpcMenu(); }
+            openNpcMenu() { 
+                // ガード処理追加
+                if (!this.canUpgrade) {
+                    this.showNotification("まだ死んでいないため利用できません");
+                    return;
+                }
+                this.state = 'MENU'; $('npcMenu').classList.remove('hidden'); this.updateNpcMenu(); 
+            }
             closeNpcMenu() { $('npcMenu').classList.add('hidden'); this.state = 'SAFE_ZONE'; this.player.y += 40; }
             
             openWeaponMenu() {
-                this.state = 'MENU';
-                $('weaponSmithMenu').classList.remove('hidden');
-                const list = $('weaponList');
-                list.innerHTML = '';
-                this.runData.unlockedWeapons.forEach(wep => {
+                this.state = 'MENU'; $('weaponSmithMenu').classList.remove('hidden');
+                $('smithGold').innerText = this.runData.gold;
+                const list = $('weaponList'); list.innerHTML = '';
+                
+                // WEAPON_DEFS based generation
+                for(let key in WEAPON_DEFS) {
+                    const def = WEAPON_DEFS[key];
+                    const isUnlocked = this.runData.unlockedWeapons.includes(key);
+                    const isActive = this.runData.currentWeapon === key;
+
+                    const card = document.createElement('div');
+                    card.className = `p-3 rounded border flex justify-between items-center ${isActive ? 'bg-orange-800 border-orange-500' : 'bg-gray-700 border-gray-600'}`;
+
+                    // Text part
+                    const info = document.createElement('div');
+                    info.innerHTML = `<div class="font-bold">${def.name} ${isActive ? '<span class="text-xs text-yellow-300 ml-2">[装備中]</span>' : ''}</div><div class="text-xs text-gray-400">${def.desc}</div>`;
+                    card.appendChild(info);
+
+                    // Button part
                     const btn = document.createElement('button');
-                    const label = wep === 'gun' ? '銃 (Gun)' : '剣 (Sword)';
-                    const isActive = this.runData.currentWeapon === wep;
-                    btn.className = `p-3 rounded border text-left ${isActive ? 'bg-orange-700 border-orange-500' : 'bg-gray-700 hover:bg-gray-600 border-gray-600'}`;
-                    btn.innerText = label + (isActive ? ' [装備中]' : '');
-                    if (!isActive) btn.onclick = () => this.switchWeapon(wep);
-                    list.appendChild(btn);
-                });
+                    if (isUnlocked) {
+                        if (isActive) {
+                            btn.className = "bg-gray-500 text-gray-300 px-3 py-1 rounded text-xs cursor-default";
+                            btn.innerText = "装備中";
+                        } else {
+                            btn.className = "bg-green-600 hover:bg-green-500 text-white px-3 py-1 rounded text-xs";
+                            btn.innerText = "装備する";
+                            btn.onclick = () => this.switchWeapon(key);
+                        }
+                    } else {
+                        const canBuy = this.runData.gold >= def.price;
+                        btn.className = `px-3 py-1 rounded text-xs ${canBuy ? 'bg-yellow-600 hover:bg-yellow-500 text-white' : 'bg-gray-600 text-gray-400 cursor-not-allowed'}`;
+                        btn.innerHTML = `購入 (${def.price} G)`;
+                        if (canBuy) btn.onclick = () => this.unlockWeapon(key);
+                    }
+                    card.appendChild(btn);
+                    list.appendChild(card);
+                }
             }
             closeWeaponMenu() { $('weaponSmithMenu').classList.add('hidden'); this.state = 'SAFE_ZONE'; this.player.y += 40; }
 
-            updateNpcMenu() {
-                $('npcPoints').innerText = this.metaData.points;
-                $('metaMaxHpVal').innerText = 100 + (this.metaData.maxHpLevel * 10);
-                $('metaAtkVal').innerText = 10 + (this.metaData.atkLevel * 2);
+            unlockWeapon(key) {
+                const def = WEAPON_DEFS[key];
+                if (this.runData.gold >= def.price) {
+                    this.runData.gold -= def.price;
+                    this.runData.unlockedWeapons.push(key);
+                    this.showNotification(`${def.name} を購入しました！`);
+                    this.switchWeapon(key); // Auto equip
+                } else {
+                    this.showNotification("お金が足りません");
+                }
+            }
+
+            updateNpcMenu() { 
+                $('npcPoints').innerText = this.metaData.points; 
+                $('metaMaxHpVal').innerText = 100 + (this.metaData.maxHpLevel * 10); 
+                $('metaAtkVal').innerText = 10 + (this.metaData.atkLevel * 2); 
+                $('metaSkillSlotVal').innerText = (3 + (this.metaData.skillSlotLevel || 0));
+                $('metaTotemVal').innerText = this.metaData.totemCount || 0;
             }
             upgradeMeta(type) {
-                const costs = { maxHp: 100, baseAtk: 200 };
+                const costs = { maxHp: 100, baseAtk: 200, skillSlot: 500, totem: 1000 };
                 if (this.metaData.points >= costs[type]) {
-                    this.metaData.points -= costs[type];
-                    if (type === 'maxHp') { this.metaData.maxHpLevel++; }
-                    if (type === 'baseAtk') { this.metaData.atkLevel++; }
-                    this.saveMetaData(); this.updateNpcMenu();
-                    this.player.maxHp = 100 + (this.metaData.maxHpLevel * 10);
-                    this.player.atk = 10 + (this.metaData.atkLevel * 2);
-                    this.player.hp = this.player.maxHp;
+                    
+                    if (type === 'skillSlot') {
+                        if ((this.metaData.skillSlotLevel || 0) >= 2) {
+                            this.showNotification("これ以上拡張できません");
+                            return;
+                        }
+                        this.metaData.skillSlotLevel = (this.metaData.skillSlotLevel || 0) + 1;
+                        this.metaData.points -= costs[type];
+                        this.updateSkillHud(); 
+                    } else if (type === 'totem') {
+                        this.metaData.totemCount = (this.metaData.totemCount || 0) + 1;
+                        this.metaData.points -= costs[type];
+                        this.showNotification("不死のトーテムを購入！");
+                    } else {
+                        this.metaData.points -= costs[type];
+                        if (type === 'maxHp') { this.metaData.maxHpLevel++; } 
+                        if (type === 'baseAtk') { this.metaData.atkLevel++; }
+                        this.player.maxHp = 100 + (this.metaData.maxHpLevel * 10); 
+                        this.player.atk = 10 + (this.metaData.atkLevel * 2); 
+                        this.player.hp = this.player.maxHp;
+                    }
+                    this.saveMetaData(); 
+                    this.updateNpcMenu();
                 } else this.showNotification("ポイント不足");
             }
         }
-
-        /**
-         * エンティティクラス (Logic + Mesh Sync)
-         */
-        class Player {
-            constructor(x, y, maxHp, atk) {
-                this.x = x; this.y = y; this.r = 15;
-                this.maxHp = maxHp; this.hp = maxHp; this.atk = atk;
-                this.speed = 2.5;
-                this.lastAttack = 0; this.fireRate = 600; 
-                this.weapon = 'gun'; // gun, sword
-
-                // 3D Mesh (with Sword mesh inside but hidden)
-                this.mesh = createHumanoidGroup(MAT.player, 1.0, true);
-                this.mesh.position.set(x, 10, y); 
-                this.parts = {
-                    armL: this.mesh.getObjectByName("ArmL"),
-                    armR: this.mesh.getObjectByName("ArmR"),
-                    legL: this.mesh.getObjectByName("LegL"),
-                    legR: this.mesh.getObjectByName("LegR"),
-                    sword: this.mesh.getObjectByName("Sword")
-                };
-            }
-
-            setWeapon(wep) {
-                this.weapon = wep;
-                if (this.parts.sword) {
-                    this.parts.sword.visible = (wep === 'sword');
-                }
-            }
-
-            update(keys, mouse, walls) {
-                let dx = 0, dy = 0;
-                if (keys['KeyW'] || keys['ArrowUp']) dy = -1;
-                if (keys['KeyS'] || keys['ArrowDown']) dy = 1;
-                if (keys['KeyA'] || keys['ArrowLeft']) dx = -1;
-                if (keys['KeyD'] || keys['ArrowRight']) dx = 1;
-
-                const isMoving = (dx !== 0 || dy !== 0);
-
-                if (isMoving) {
-                    const len = Math.sqrt(dx*dx + dy*dy);
-                    dx /= len; dy /= len;
-                    const nextX = this.x + dx * this.speed;
-                    const nextY = this.y + dy * this.speed;
-
-                    let colX = false, colY = false;
-                    const pRectX = {x: nextX-this.r, y: this.y-this.r, w: this.r*2, h: this.r*2};
-                    const pRectY = {x: this.x-this.r, y: nextY-this.r, w: this.r*2, h: this.r*2};
-                    
-                    for (let w of walls) {
-                        if (checkRectCollide(pRectX, w)) colX = true;
-                        if (checkRectCollide(pRectY, w)) colY = true;
-                    }
-                    if (!colX) this.x = nextX;
-                    if (!colY) this.y = nextY;
-
-                    // 歩行アニメーション
-                    const time = Date.now() * 0.015;
-                    if(this.parts.armL) this.parts.armL.rotation.x = Math.sin(time) * 0.5;
-                    // 攻撃中でなければ右腕も振る
-                    if(Date.now() - this.lastAttack > this.fireRate/2) {
-                        if(this.parts.armR) this.parts.armR.rotation.x = -Math.sin(time) * 0.5;
-                    }
-                    if(this.parts.legL) this.parts.legL.rotation.x = -Math.sin(time) * 0.5;
-                    if(this.parts.legR) this.parts.legR.rotation.x = Math.sin(time) * 0.5;
-                } else {
-                    // 停止
-                    if(this.parts.armL) this.parts.armL.rotation.x = 0;
-                    if(Date.now() - this.lastAttack > this.fireRate/2) {
-                        if(this.parts.armR) this.parts.armR.rotation.x = 0;
-                    }
-                    if(this.parts.legL) this.parts.legL.rotation.x = 0;
-                    if(this.parts.legR) this.parts.legR.rotation.x = 0;
-                }
-
-                // 3D位置同期
-                this.mesh.position.x = this.x;
-                this.mesh.position.z = this.y;
-
-                // マウスの方向を向く
-                this.mesh.lookAt(mouse.x, 10, mouse.y);
-
-                // 剣のアニメーション（攻撃時）
-                if (this.weapon === 'sword' && Date.now() - this.lastAttack < 200) {
-                    // 右腕を振る
-                    if (this.parts.armR) {
-                        this.parts.armR.rotation.x = -Math.PI / 2; // 前に突き出す
-                        // 振り下ろし的な動き（簡易）
-                        const progress = (Date.now() - this.lastAttack) / 200;
-                        this.parts.armR.rotation.y = -Math.PI / 4 + progress * Math.PI / 2; 
-                    }
-                } else if (this.weapon === 'sword') {
-                    // 剣構え
-                    if(this.parts.armR) {
-                        this.parts.armR.rotation.x = 0;
-                        this.parts.armR.rotation.y = 0;
-                    }
-                }
-            }
-
-            attack() {
-                const now = Date.now();
-                if (now - this.lastAttack < this.fireRate) return;
-                
-                this.lastAttack = now;
-
-                if (this.weapon === 'gun') {
-                    // 銃撃
-                    const angle = Math.atan2(game.mouse.y - this.y, game.mouse.x - this.x);
-                    const b = new Bullet(this.x, this.y, angle);
-                    game.bullets.push(b);
-                    game.scene.add(b.mesh);
-                } else if (this.weapon === 'sword') {
-                    // 剣攻撃 (範囲)
-                    const range = 100;
-                    const arc = Math.PI / 1.5; 
-                    const facingAngle = Math.atan2(game.mouse.y - this.y, game.mouse.x - this.x);
-                    
-                    // 斬撃エフェクト生成
-                    const slash = new Effect(this.x, this.y, facingAngle);
-                    game.effects.push(slash);
-                    game.scene.add(slash.mesh);
-
-                    // 判定
-                    for (let i = game.enemies.length - 1; i >= 0; i--) {
-                        const e = game.enemies[i];
-                        const dist = Math.hypot(e.x - this.x, e.y - this.y);
-                        if (dist < range) {
-                            let angleToEnemy = Math.atan2(e.y - this.y, e.x - this.x);
-                            let diff = angleToEnemy - facingAngle;
-                            // 角度差を -PI ~ PI に正規化
-                            while (diff > Math.PI) diff -= Math.PI * 2;
-                            while (diff < -Math.PI) diff += Math.PI * 2;
-                            
-                            if (Math.abs(diff) < arc / 2) {
-                                e.takeDamage(this.atk * 1.5); 
-                                e.recoil(this);
-                                if (e.hp <= 0) game.killEnemy(e, i);
-                            }
-                        }
-                    }
-                }
-            }
-
-            takeDamage(amt) {
-                this.hp -= amt;
-                // ヒットエフェクト
-                this.mesh.traverse(child => {
-                    if (child.isMesh && child.material && child.material.isMeshStandardMaterial) {
-                        child.material.emissive.setHex(0xff0000);
-                        setTimeout(() => {
-                            if (child.material && child.material.emissive) {
-                                child.material.emissive.setHex(0x000000);
-                            }
-                        }, 100);
-                    }
-                });
-            }
-        }
-
-        class Enemy {
-            constructor(x, y, hpMulti, speedMulti) {
-                this.x = x; this.y = y; this.r = 15;
-                this.maxHp = 30 * hpMulti; this.hp = this.maxHp;
-                this.speed = (0.8 + Math.random() * 0.7) * speedMulti;
-
-                this.mesh = createHumanoidGroup(MAT.enemy, 1.1); // 少し大きめ
-                this.mesh.position.set(x, 11, y); // Y=11 (10*1.1) で地面に合わせる
-                this.parts = {
-                    armL: this.mesh.getObjectByName("ArmL"),
-                    armR: this.mesh.getObjectByName("ArmR"),
-                    legL: this.mesh.getObjectByName("LegL"),
-                    legR: this.mesh.getObjectByName("LegR")
-                };
-            }
-
-            update(player) {
-                const dx = player.x - this.x;
-                const dy = player.y - this.y;
-                const dist = Math.sqrt(dx*dx + dy*dy);
-                if (dist > 0) {
-                    this.x += (dx / dist) * this.speed;
-                    this.y += (dy / dist) * this.speed;
-                    
-                    // 歩行アニメーション
-                    const time = Date.now() * 0.015;
-                    if(this.parts.armL) this.parts.armL.rotation.x = Math.sin(time) * 0.5;
-                    if(this.parts.armR) this.parts.armR.rotation.x = -Math.sin(time) * 0.5;
-                    if(this.parts.legL) this.parts.legL.rotation.x = -Math.sin(time) * 0.5;
-                    if(this.parts.legR) this.parts.legR.rotation.x = Math.sin(time) * 0.5;
-                }
-                
-                this.mesh.position.x = this.x;
-                this.mesh.position.z = this.y;
-                // プレイヤーを向く
-                this.mesh.lookAt(player.x, 11, player.y);
-            }
-
-            takeDamage(amt) {
-                this.hp -= amt;
-                // ダメージ演出
-                this.mesh.scale.set(1.3, 1.3, 1.3);
-                setTimeout(() => this.mesh.scale.set(1.1, 1.1, 1.1), 50);
-                
-                this.mesh.traverse(child => {
-                    // MeshStandardMaterialのみ対象にする
-                    if (child.isMesh && child.material && child.material.isMeshStandardMaterial) {
-                        // 連続被弾対策：必ず黒に戻す
-                        child.material.emissive.setHex(0xffaaaa);
-                        setTimeout(() => {
-                            if (child && child.material && child.material.emissive) {
-                                child.material.emissive.setHex(0x000000);
-                            }
-                        }, 100);
-                    }
-                });
-            }
-
-            recoil(player) {
-                const angle = Math.atan2(this.y - player.y, this.x - player.x);
-                this.x += Math.cos(angle) * 30;
-                this.y += Math.sin(angle) * 30;
-                this.mesh.position.x = this.x;
-                this.mesh.position.z = this.y;
-            }
-        }
-
-        class Bullet {
-            constructor(x, y, angle) {
-                this.x = x; this.y = y; this.r = 5;
-                this.speed = 12;
-                this.vx = Math.cos(angle) * this.speed;
-                this.vy = Math.sin(angle) * this.speed;
-
-                this.mesh = new THREE.Mesh(GEO.bullet, MAT.bullet);
-                this.mesh.scale.set(10, 10, 10);
-                this.mesh.position.set(x, 15, y);
-            }
-            update() {
-                this.x += this.vx; this.y += this.vy;
-                this.mesh.position.x = this.x;
-                this.mesh.position.z = this.y;
-            }
-        }
-
-        class Effect {
-            constructor(x, y, angle) {
-                this.life = 1.0;
-                this.mesh = new THREE.Mesh(GEO.slash, MAT.slash.clone());
-                this.mesh.position.set(x, 12, y); // 高さを腰の位置に合わせる
-                this.mesh.rotation.x = -Math.PI / 2;
-                // 斬撃の中心をマウスの方向に合わせる
-                // Math.atan2(z, x) は手前が正、Three.jsの回転は奥が正(反時計)なので符号反転
-                this.mesh.rotation.z = -angle; 
-                
-                // プレイヤーの少し前へずらす
-                this.mesh.position.x += Math.cos(angle) * 20;
-                this.mesh.position.z += Math.sin(angle) * 20;
-            }
-            update() {
-                this.life -= 0.15; // 素早く消えるように
-                this.mesh.material.opacity = this.life;
-                // 拡大処理は削除してキレを出す
-            }
-        }
-
-        class Item {
-            constructor(x, y, type, value) {
-                this.x = x; this.y = y; this.r = 10;
-                this.type = type; this.value = value;
-                
-                this.mesh = new THREE.Mesh(GEO.item, type === 'gold' ? MAT.gold : MAT.point);
-                this.mesh.scale.set(12, 12, 12);
-                this.mesh.position.set(x, 10, y);
-            }
-            update() {
-                this.mesh.position.x = this.x;
-                this.mesh.position.z = this.y;
-                this.mesh.rotation.y += 0.05;
-                this.mesh.rotation.z += 0.05;
-            }
-        }
-
         const game = new Game();
     </script>
 </body>
