@@ -73,6 +73,10 @@
         }
 
         /* スキルクールダウン表示 */
+        #skillBar {
+            pointer-events: auto; /* タッチ可能に */
+            z-index: 25; /* ジョイスティックより上 */
+        }
         .skill-slot {
             position: relative;
             width: 50px;
@@ -86,6 +90,12 @@
             font-size: 20px;
             color: #fff;
             overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        .skill-slot:active {
+            transform: scale(0.9);
+            border-color: #fff;
         }
         .skill-cd-overlay {
             position: absolute;
@@ -104,6 +114,29 @@
             color: #aaa;
         }
         
+        /* Virtual Joystick */
+        #joystick-zone {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            display: none; 
+            pointer-events: none; /* JSで位置制御するため */
+            z-index: 20;
+        }
+        #joystick-knob {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+        }
+
         /* 選択肢カード */
         .choice-card {
             transition: transform 0.2s, border-color 0.2s;
@@ -122,6 +155,9 @@
 
     <!-- 画面外インジケーターコンテナ -->
     <div id="indicator-container"></div>
+    
+    <!-- ジョイスティック (動的に表示) -->
+    <div id="joystick-zone"><div id="joystick-knob"></div></div>
 
     <!-- UI: HUD (ゲーム中常時表示) -->
     <div id="hud" class="absolute top-0 left-0 w-full p-4 pointer-events-none hidden flex justify-between items-start text-shadow-md z-10">
@@ -133,12 +169,15 @@
         <div class="text-right">
             <div class="text-blue-300">POINTS: <span id="pointDisplay">0</span> PTS</div>
             <div class="text-xs text-gray-400 mt-1">Weapon: <span id="weaponDisplay">GUN</span></div>
-            <div class="text-xs text-gray-400">WASD: 移動 | Click: 攻撃</div>
+            <div class="text-xs text-gray-400 mt-1 opacity-70">
+                PC: WASD移動 / Click攻撃<br>
+                Mobile: 左画面ドラッグ移動 / 右画面ドラッグ攻撃
+            </div>
         </div>
     </div>
 
     <!-- スキルバー -->
-    <div id="skillBar" class="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2 pointer-events-none hidden z-10">
+    <div id="skillBar" class="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2 hidden z-25">
         <!-- JSで生成 -->
     </div>
 
@@ -695,60 +734,98 @@
                 this.parts = { armL: this.mesh.getObjectByName("ArmL"), armR: this.mesh.getObjectByName("ArmR"), legL: this.mesh.getObjectByName("LegL"), legR: this.mesh.getObjectByName("LegR"), sword: this.mesh.getObjectByName("Sword") };
             }
             setWeapon(wep) { this.weapon = wep; if (this.parts.sword) this.parts.sword.visible = (wep === 'sword'); }
-            update(keys, mouse, walls) {
-                let dx = 0, dy = 0;
-                if (keys['KeyW'] || keys['ArrowUp']) dy = -1;
-                if (keys['KeyS'] || keys['ArrowDown']) dy = 1;
-                if (keys['KeyA'] || keys['ArrowLeft']) dx = -1;
-                if (keys['KeyD'] || keys['ArrowRight']) dx = 1;
+            
+            // update method modified to accept vector input
+            update(moveInput, aimPos, walls) {
+                // moveInput: {x, y} (-1 to 1)
+                let dx = moveInput.x;
+                let dy = moveInput.y;
+
                 const isMoving = (dx !== 0 || dy !== 0);
+
                 if (isMoving) {
-                    const len = Math.sqrt(dx*dx + dy*dy); dx /= len; dy /= len;
-                    const nextX = this.x + dx * this.speed; const nextY = this.y + dy * this.speed;
+                    const nextX = this.x + dx * this.speed;
+                    const nextY = this.y + dy * this.speed;
+
                     let colX = false, colY = false;
                     const pRectX = {x: nextX-this.r, y: this.y-this.r, w: this.r*2, h: this.r*2};
                     const pRectY = {x: this.x-this.r, y: nextY-this.r, w: this.r*2, h: this.r*2};
-                    for (let w of walls) { if (checkRectCollide(pRectX, w)) colX = true; if (checkRectCollide(pRectY, w)) colY = true; }
-                    if (!colX) this.x = nextX; if (!colY) this.y = nextY;
+                    
+                    for (let w of walls) {
+                        if (checkRectCollide(pRectX, w)) colX = true;
+                        if (checkRectCollide(pRectY, w)) colY = true;
+                    }
+                    if (!colX) this.x = nextX;
+                    if (!colY) this.y = nextY;
+
                     const time = Date.now() * 0.015;
                     if(this.parts.armL) this.parts.armL.rotation.x = Math.sin(time) * 0.5;
-                    if(Date.now() - this.lastAttack > this.fireRate/2) { if(this.parts.armR) this.parts.armR.rotation.x = -Math.sin(time) * 0.5; }
+                    if(Date.now() - this.lastAttack > this.fireRate/2) {
+                        if(this.parts.armR) this.parts.armR.rotation.x = -Math.sin(time) * 0.5;
+                    }
                     if(this.parts.legL) this.parts.legL.rotation.x = -Math.sin(time) * 0.5;
                     if(this.parts.legR) this.parts.legR.rotation.x = Math.sin(time) * 0.5;
                 } else {
                     if(this.parts.armL) this.parts.armL.rotation.x = 0;
-                    if(Date.now() - this.lastAttack > this.fireRate/2) { if(this.parts.armR) this.parts.armR.rotation.x = 0; }
+                    if(Date.now() - this.lastAttack > this.fireRate/2) {
+                        if(this.parts.armR) this.parts.armR.rotation.x = 0;
+                    }
                     if(this.parts.legL) this.parts.legL.rotation.x = 0;
                     if(this.parts.legR) this.parts.legR.rotation.x = 0;
                 }
-                this.mesh.position.x = this.x; this.mesh.position.z = this.y;
-                this.mesh.lookAt(mouse.x, 10, mouse.y);
+
+                this.mesh.position.x = this.x;
+                this.mesh.position.z = this.y;
+                
+                // Look at aim position (mouse or touch aim)
+                this.mesh.lookAt(aimPos.x, 10, aimPos.y);
+
                 if (this.weapon === 'sword' && Date.now() - this.lastAttack < 200) {
-                    if (this.parts.armR) { this.parts.armR.rotation.x = -Math.PI / 2; const progress = (Date.now() - this.lastAttack) / 200; this.parts.armR.rotation.y = -Math.PI / 4 + progress * Math.PI / 2; }
-                } else if (this.weapon === 'sword') { if(this.parts.armR) { this.parts.armR.rotation.x = 0; this.parts.armR.rotation.y = 0; } }
+                    if (this.parts.armR) {
+                        this.parts.armR.rotation.x = -Math.PI / 2;
+                        const progress = (Date.now() - this.lastAttack) / 200;
+                        this.parts.armR.rotation.y = -Math.PI / 4 + progress * Math.PI / 2; 
+                    }
+                } else if (this.weapon === 'sword') {
+                    if(this.parts.armR) {
+                        this.parts.armR.rotation.x = 0;
+                        this.parts.armR.rotation.y = 0;
+                    }
+                }
             }
-            attack() {
+
+            attack(aimPos) {
                 const now = Date.now();
                 if (now - this.lastAttack < this.fireRate) return;
                 this.lastAttack = now;
+
+                const angle = Math.atan2(aimPos.y - this.y, aimPos.x - this.x);
+
                 if (this.weapon === 'gun') {
-                    const angle = Math.atan2(game.mouse.y - this.y, game.mouse.x - this.x);
-                    const b = new Bullet(this.x, this.y, angle, false); // Player bullet
-                    game.bullets.push(b); game.scene.add(b.mesh);
+                    const b = new Bullet(this.x, this.y, angle, false); 
+                    game.bullets.push(b);
+                    game.scene.add(b.mesh);
                 } else if (this.weapon === 'sword') {
-                    const range = 100; const arc = Math.PI / 1.5; 
-                    const facingAngle = Math.atan2(game.mouse.y - this.y, game.mouse.x - this.x);
+                    const range = 100;
+                    const arc = Math.PI / 1.5; 
+                    const facingAngle = angle;
+                    
                     const slash = new Effect(this.x, this.y, facingAngle);
-                    game.effects.push(slash); game.scene.add(slash.mesh);
+                    game.effects.push(slash);
+                    game.scene.add(slash.mesh);
+
                     for (let i = game.enemies.length - 1; i >= 0; i--) {
                         const e = game.enemies[i];
                         const dist = Math.hypot(e.x - this.x, e.y - this.y);
                         if (dist < range) {
                             let angleToEnemy = Math.atan2(e.y - this.y, e.x - this.x);
                             let diff = angleToEnemy - facingAngle;
-                            while (diff > Math.PI) diff -= Math.PI * 2; while (diff < -Math.PI) diff += Math.PI * 2;
+                            while (diff > Math.PI) diff -= Math.PI * 2;
+                            while (diff < -Math.PI) diff += Math.PI * 2;
+                            
                             if (Math.abs(diff) < arc / 2) {
-                                e.takeDamage(this.atk * 1.5); e.recoil(this.x, this.y);
+                                e.takeDamage(this.atk * 1.5); 
+                                e.recoil(this.x, this.y);
                                 if (e.hp <= 0) game.killEnemy(e, i);
                             }
                         }
@@ -774,6 +851,11 @@
                 this.difficultyMultiplier = 1;
                 this.keys = {};
                 this.mouse = { x: 0, y: 0, down: false };
+                this.touchInput = {
+                    left: { active: false, x: 0, y: 0 }, // Movement
+                    right: { active: false, x: 0, y: 0 }  // Aim/Attack
+                };
+                
                 this.raycaster = new THREE.Raycaster();
                 this.setupInput();
 
@@ -788,8 +870,7 @@
                 this.interactableMeshes = [];
                 
                 this.metaData = this.loadMetaData();
-                this.canUpgrade = true; // 強化可能フラグ
-                // Skills data: [{id: 'orb', count: 1, damageLvl: 0, assignedKey: 'Z', lastUse: 0}]
+                this.canUpgrade = true; 
                 this.runData = { 
                     gold: 0, pointsGainedRun: 0, 
                     unlockedWeapons: ['gun'], currentWeapon: 'gun',
@@ -800,6 +881,7 @@
                 this.animate();
             }
 
+            // ... initThree ...
             initThree() {
                 const container = $('canvas-container');
                 this.scene = new THREE.Scene();
@@ -825,17 +907,17 @@
             }
 
             setupInput() {
+                // Keyboard
                 window.addEventListener('keydown', e => {
                     this.keys[e.code] = true;
                     if (this.state === 'PLAYING') {
-                        // Skill Keys
                         const keyMap = {'KeyZ': 0, 'KeyX': 1, 'KeyC': 2, 'KeyV': 3, 'KeyB': 4};
-                        if (e.code in keyMap) {
-                            this.useSkill(keyMap[e.code]);
-                        }
+                        if (e.code in keyMap) this.useSkill(keyMap[e.code]);
                     }
                 });
                 window.addEventListener('keyup', e => this.keys[e.code] = false);
+
+                // Mouse
                 window.addEventListener('mousemove', e => {
                     const rect = this.renderer.domElement.getBoundingClientRect();
                     const x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
@@ -844,13 +926,110 @@
                     const intersects = this.raycaster.intersectObject(this.plane);
                     if (intersects.length > 0) { this.mouse.x = intersects[0].point.x; this.mouse.y = intersects[0].point.z; }
                 });
-                window.addEventListener('mousedown', (e) => { if (e.target.closest('button') || e.target.closest('.interactive-ui')) return; this.mouse.down = true; if (this.state === 'PLAYING' && this.player) this.player.attack(); });
+                window.addEventListener('mousedown', (e) => { 
+                    if (e.target.closest('button') || e.target.closest('.interactive-ui') || e.target.closest('.skill-slot')) return; 
+                    this.mouse.down = true; 
+                });
                 window.addEventListener('mouseup', () => this.mouse.down = false);
+
+                // Touch
+                const joystickZone = $('joystick-zone');
+                const joystickKnob = $('joystick-knob');
+                let startTouchId = null;
+                let startX, startY;
+
+                window.addEventListener('touchstart', (e) => {
+                    if (e.target.closest('button') || e.target.closest('.interactive-ui') || e.target.closest('.skill-slot')) return;
+                    e.preventDefault();
+
+                    for (let i = 0; i < e.changedTouches.length; i++) {
+                        const t = e.changedTouches[i];
+                        const x = t.clientX;
+                        const y = t.clientY;
+
+                        // Left half for Movement
+                        if (x < window.innerWidth / 2) {
+                            if (this.touchInput.left.active) continue;
+                            this.touchInput.left.active = true;
+                            startTouchId = t.identifier;
+                            startX = x; startY = y;
+                            
+                            joystickZone.style.display = 'block';
+                            joystickZone.style.left = (x - 50) + 'px';
+                            joystickZone.style.top = (y - 50) + 'px';
+                            joystickKnob.style.transform = `translate(-50%, -50%)`;
+                            this.touchInput.left.x = 0;
+                            this.touchInput.left.y = 0;
+                        } 
+                        // Right half for Aim/Attack
+                        else {
+                            this.touchInput.right.active = true;
+                            this.updateTouchAim(x, y);
+                        }
+                    }
+                }, {passive: false});
+
+                window.addEventListener('touchmove', (e) => {
+                    e.preventDefault();
+                    for (let i = 0; i < e.changedTouches.length; i++) {
+                        const t = e.changedTouches[i];
+                        
+                        if (t.identifier === startTouchId) {
+                            // Update Joystick
+                            const maxDist = 40;
+                            let dx = t.clientX - startX;
+                            let dy = t.clientY - startY;
+                            const dist = Math.sqrt(dx*dx + dy*dy);
+                            if (dist > maxDist) {
+                                dx = (dx / dist) * maxDist;
+                                dy = (dy / dist) * maxDist;
+                            }
+                            joystickKnob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+                            this.touchInput.left.x = dx / maxDist;
+                            this.touchInput.left.y = dy / maxDist;
+                        } else if (t.clientX >= window.innerWidth / 2) {
+                            // Update Aim
+                            this.updateTouchAim(t.clientX, t.clientY);
+                        }
+                    }
+                }, {passive: false});
+
+                window.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    for (let i = 0; i < e.changedTouches.length; i++) {
+                        const t = e.changedTouches[i];
+                        if (t.identifier === startTouchId) {
+                            this.touchInput.left.active = false;
+                            this.touchInput.left.x = 0; 
+                            this.touchInput.left.y = 0;
+                            joystickZone.style.display = 'none';
+                            startTouchId = null;
+                        } else {
+                            // Assume right side lift
+                            // Simple logic: if not left, must be right. 
+                            // In real multi-touch, track ID properly. But this works for simple 2-finger.
+                            this.touchInput.right.active = false;
+                        }
+                    }
+                });
             }
 
+            updateTouchAim(screenX, screenY) {
+                // Map screen coords to world coords (simplified plane intersection)
+                const rect = this.renderer.domElement.getBoundingClientRect();
+                const x = ((screenX - rect.left) / rect.width) * 2 - 1;
+                const y = -((screenY - rect.top) / rect.height) * 2 + 1;
+                this.raycaster.setFromCamera({ x, y }, this.camera);
+                const intersects = this.raycaster.intersectObject(this.plane);
+                if (intersects.length > 0) { 
+                    this.touchInput.right.x = intersects[0].point.x;
+                    this.touchInput.right.y = intersects[0].point.z;
+                }
+            }
+
+            // ... loadMetaData, saveMetaData, hasSaveData, loadSaveGame, saveRunData ...
             loadMetaData() { 
                 const data = localStorage.getItem(STORAGE_KEY_META); 
-                // Default skills slots = 3
                 const def = { points: 0, maxHpLevel: 0, atkLevel: 0, skillSlotLevel: 0, totemCount: 0 }; 
                 return data ? { ...def, ...JSON.parse(data) } : def; 
             }
@@ -880,6 +1059,7 @@
                 localStorage.setItem(STORAGE_KEY_SAVE, JSON.stringify(saveData));
             }
 
+            // ... clearEntities, initSafeZone ...
             clearEntities() {
                 if (this.player && this.player.mesh) this.scene.remove(this.player.mesh);
                 this.enemies.forEach(e => { this.scene.remove(e.mesh); e.removeIndicator(); });
@@ -929,10 +1109,7 @@
                 this.interactables.push({ type: 'save', x: 100, y: 0, r: 25, action: () => this.manualSave() });
                 const saveMesh = new THREE.Mesh(GEO.savePoint, MAT.savePoint);
                 saveMesh.position.set(100, 20, 0);
-                // Rotate animation in update loop or just here static for simplicity (add to interactableMeshes for raycast logic if we used raycast interaction, but we use distance check)
                 this.scene.add(saveMesh); this.interactableMeshes.push(saveMesh);
-                // Floating text for save point
-                /* (Simplified: no text mesh here, just glowing crystal) */
 
                 this.interactables.push({ type: 'door', x: -25, y: -140, w: 50, h: 20, action: () => this.startNewGame() });
                 const doorMesh = createDoorGroup(MAT.doorStart); doorMesh.position.set(0, 0, -148); this.scene.add(doorMesh); this.interactableMeshes.push(doorMesh);
@@ -946,6 +1123,7 @@
                 this.updateSkillHud(); // Reset UI
             }
 
+            // ... startNewGame, startBattlePhase, spawnWave, animate ...
             startNewGame() {
                 localStorage.removeItem(STORAGE_KEY_SAVE);
                 this.wave = 1; this.difficultyMultiplier = 1;
@@ -1027,7 +1205,7 @@
                 if (this.state !== 'PLAYING' && this.state !== 'SAFE_ZONE') return;
                 const now = Date.now();
 
-                // Skill Cooldown UI Update
+                // Skill Cooldown UI
                 if (this.state === 'PLAYING') {
                      this.runData.skills.forEach((skill, idx) => {
                          const def = SKILL_DEFS[skill.id];
@@ -1038,12 +1216,44 @@
                      });
                 }
 
+                // Input Handling: Combine Keyboard and Touch
+                let moveX = 0;
+                let moveY = 0;
+                let aimPos = { x: this.mouse.x, y: this.mouse.y };
+                let isAttacking = this.mouse.down;
+
+                // Keyboard Logic
+                if (this.keys['KeyW'] || this.keys['ArrowUp']) moveY = -1;
+                if (this.keys['KeyS'] || this.keys['ArrowDown']) moveY = 1;
+                if (this.keys['KeyA'] || this.keys['ArrowLeft']) moveX = -1;
+                if (this.keys['KeyD'] || this.keys['ArrowRight']) moveX = 1;
+
+                // Touch Logic Overwrite
+                if (this.touchInput.left.active) {
+                    moveX = this.touchInput.left.x;
+                    moveY = this.touchInput.left.y;
+                }
+                if (this.touchInput.right.active) {
+                    aimPos = { x: this.touchInput.right.x, y: this.touchInput.right.y };
+                    isAttacking = true;
+                }
+
+                // Normalize keyboard if used alone
+                if (!this.touchInput.left.active && (moveX !== 0 || moveY !== 0)) {
+                    const len = Math.sqrt(moveX*moveX + moveY*moveY);
+                    moveX /= len; moveY /= len;
+                }
+
                 if (this.player) {
-                    this.player.update(this.keys, this.mouse, this.walls);
+                    this.player.update({x: moveX, y: moveY}, aimPos, this.walls);
                     const targetX = this.player.x; const targetZ = this.player.y + 300; 
                     this.camera.position.x += (targetX - this.camera.position.x) * 0.1;
                     this.camera.position.z += (targetZ - this.camera.position.z) * 0.1;
                     this.playerLight.position.set(this.player.x, 50, this.player.y);
+
+                    if (this.state === 'PLAYING' && isAttacking) {
+                        this.player.attack(aimPos);
+                    }
                 }
 
                 // Bullets
@@ -1053,16 +1263,14 @@
                     
                     if (this.state === 'PLAYING') {
                         if (b.isEnemy) {
-                            // Enemy bullet hits Player
                             if (checkCircleCollide(b, this.player)) {
-                                this.player.takeDamage(15 * this.difficultyMultiplier); // higher dmg
+                                this.player.takeDamage(15 * this.difficultyMultiplier); 
                                 this.scene.remove(b.mesh); this.bullets.splice(i, 1);
                                 this.updateHud();
                                 if (this.player.hp <= 0) this.handleGameOver();
                                 continue;
                             }
                         } else {
-                            // Player bullet hits Enemy
                             for (let j = this.enemies.length - 1; j >= 0; j--) {
                                 const e = this.enemies[j];
                                 if (checkCircleCollide(b, e)) {
@@ -1080,7 +1288,7 @@
                     p.update();
                     
                     if (this.state === 'PLAYING') {
-                        // ガード: p.type が SKILL_DEFS に存在するか確認
+                        // ガード
                         if (!p.type || !SKILL_DEFS[p.type]) continue;
 
                         const def = SKILL_DEFS[p.type];
@@ -1153,7 +1361,7 @@
                             if (dist < (obj.r + 15)) obj.action(); 
                         }
                     }
-                    // Rotate save point (より安全な検索)
+                    // Rotate save point
                     const saveMesh = this.interactableMeshes.find(m => {
                         return m && m.geometry && m.geometry.type === 'OctahedronGeometry';
                     });
@@ -1234,6 +1442,12 @@
                     const div = document.createElement('div');
                     div.className = 'skill-slot';
                     div.innerHTML = `<span class="skill-key">${SKILL_KEYS[i]}</span>`;
+                    
+                    // Touch Event for Skill Activation
+                    div.onclick = (e) => {
+                        e.stopPropagation();
+                        this.useSkill(i);
+                    };
                     
                     if (skill) {
                         const def = SKILL_DEFS[skill.id];
@@ -1481,8 +1695,15 @@
             shopBuy(type) { /* Legacy Shop unused in wave menu, but kept for logic if needed later */ }
 
             switchWeapon(wep) {
-                this.runData.currentWeapon = wep; this.player.setWeapon(wep); this.updateHud();
+                this.runData.currentWeapon = wep; 
+                this.player.setWeapon(wep); 
+                this.updateHud();
                 if(this.state === 'MENU') this.openWeaponMenu();
+                
+                // 装備変更を即時保存（セーフゾーンでの変更を紫ドアに反映させるため）
+                if (this.state === 'SAFE_ZONE' || this.state === 'MENU') {
+                    this.saveRunData();
+                }
             }
 
             openNpcMenu() { 
@@ -1543,7 +1764,9 @@
                     this.runData.gold -= def.price;
                     this.runData.unlockedWeapons.push(key);
                     this.showNotification(`${def.name} を購入しました！`);
-                    this.switchWeapon(key); // Auto equip
+                    this.switchWeapon(key); // Auto equip & Save
+                    // switchWeaponで保存されるが、念のため所持金の変更も確実に保存
+                    this.saveRunData();
                 } else {
                     this.showNotification("お金が足りません");
                 }
