@@ -114,27 +114,46 @@
             color: #aaa;
         }
         
-        /* Virtual Joystick */
-        #joystick-zone {
+        /* Virtual Joystick Styles */
+        .joystick-zone {
             position: absolute;
-            width: 100px;
-            height: 100px;
+            width: 120px;
+            height: 120px;
             background: rgba(255, 255, 255, 0.1);
             border: 2px solid rgba(255, 255, 255, 0.3);
             border-radius: 50%;
-            display: none; 
-            pointer-events: none; /* JSで位置制御するため */
+            pointer-events: auto;
             z-index: 20;
+            touch-action: none;
         }
-        #joystick-knob {
+        .joystick-knob {
             position: absolute;
             top: 50%;
             left: 50%;
-            width: 40px;
-            height: 40px;
+            width: 50px;
+            height: 50px;
             background: rgba(255, 255, 255, 0.5);
             border-radius: 50%;
             transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+        
+        /* Left: Movement (Floating) */
+        #joystick-left {
+            display: none; /* Touch時に表示 */
+            pointer-events: none; /* 位置合わせ用 */
+        }
+        
+        /* Right: Attack (Fixed) */
+        #joystick-right {
+            bottom: 40px;
+            right: 40px;
+            display: none; /* 初期状態は非表示（スマホ判定で表示） */
+            background: rgba(255, 100, 100, 0.1);
+            border-color: rgba(255, 100, 100, 0.3);
+        }
+        #joystick-right .joystick-knob {
+            background: rgba(255, 100, 100, 0.5);
         }
 
         /* 選択肢カード */
@@ -156,8 +175,9 @@
     <!-- 画面外インジケーターコンテナ -->
     <div id="indicator-container"></div>
     
-    <!-- ジョイスティック (動的に表示) -->
-    <div id="joystick-zone"><div id="joystick-knob"></div></div>
+    <!-- ジョイスティック -->
+    <div id="joystick-left" class="joystick-zone"><div class="joystick-knob" id="knob-left"></div></div>
+    <div id="joystick-right" class="joystick-zone"><div class="joystick-knob" id="knob-right"></div></div>
 
     <!-- UI: HUD (ゲーム中常時表示) -->
     <div id="hud" class="absolute top-0 left-0 w-full p-4 pointer-events-none hidden flex justify-between items-start text-shadow-md z-10">
@@ -171,7 +191,7 @@
             <div class="text-xs text-gray-400 mt-1">Weapon: <span id="weaponDisplay">GUN</span></div>
             <div class="text-xs text-gray-400 mt-1 opacity-70">
                 PC: WASD移動 / Click攻撃<br>
-                Mobile: 左画面ドラッグ移動 / 右画面ドラッグ攻撃
+                Mobile: 左画面ドラッグ移動 / 右スティックで攻撃
             </div>
         </div>
     </div>
@@ -846,6 +866,7 @@
         class Game {
             constructor() {
                 this.initThree();
+                this.checkTouchInterface(); 
                 this.state = 'SAFE_ZONE';
                 this.wave = 1;
                 this.difficultyMultiplier = 1;
@@ -881,7 +902,6 @@
                 this.animate();
             }
 
-            // ... initThree ...
             initThree() {
                 const container = $('canvas-container');
                 this.scene = new THREE.Scene();
@@ -900,10 +920,23 @@
                 this.dirLight.shadow.mapSize.width = 2048; this.dirLight.shadow.mapSize.height = 2048;
                 this.scene.add(this.dirLight);
                 this.playerLight = new THREE.PointLight(0xffffff, 0.5, 500); this.scene.add(this.playerLight);
-                window.addEventListener('resize', () => { this.camera.aspect = window.innerWidth / window.innerHeight; this.camera.updateProjectionMatrix(); this.renderer.setSize(window.innerWidth, window.innerHeight); });
+                window.addEventListener('resize', () => { 
+                    this.camera.aspect = window.innerWidth / window.innerHeight; 
+                    this.camera.updateProjectionMatrix(); 
+                    this.renderer.setSize(window.innerWidth, window.innerHeight); 
+                    this.checkTouchInterface(); 
+                });
                 this.planeGeometry = new THREE.PlaneGeometry(10000, 10000);
                 this.plane = new THREE.Mesh(this.planeGeometry, new THREE.MeshBasicMaterial({ visible: false }));
                 this.plane.rotation.x = -Math.PI / 2; this.scene.add(this.plane);
+            }
+
+            checkTouchInterface() {
+                const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+                const rightStick = $('joystick-right');
+                if (rightStick) {
+                    rightStick.style.display = isTouch ? 'block' : 'none';
+                }
             }
 
             setupInput() {
@@ -933,10 +966,29 @@
                 window.addEventListener('mouseup', () => this.mouse.down = false);
 
                 // Touch
-                const joystickZone = $('joystick-zone');
-                const joystickKnob = $('joystick-knob');
-                let startTouchId = null;
-                let startX, startY;
+                const joystickLeft = $('joystick-left');
+                const knobLeft = $('knob-left');
+                const joystickRight = $('joystick-right');
+                const knobRight = $('knob-right');
+                
+                let leftTouchId = null;
+                let leftStartX, leftStartY;
+                
+                let rightTouchId = null;
+                let rightStartX, rightStartY;
+                let rightCenterX, rightCenterY;
+
+                // Initial position for right joystick
+                // We'll calculate its center on first touch or based on CSS
+                // Let's get its rect on init
+                const updateRightJoystickCenter = () => {
+                    const rect = joystickRight.getBoundingClientRect();
+                    rightCenterX = rect.left + rect.width / 2;
+                    rightCenterY = rect.top + rect.height / 2;
+                };
+                // Call initially and on resize
+                updateRightJoystickCenter();
+                window.addEventListener('resize', updateRightJoystickCenter);
 
                 window.addEventListener('touchstart', (e) => {
                     if (e.target.closest('button') || e.target.closest('.interactive-ui') || e.target.closest('.skill-slot')) return;
@@ -947,24 +999,35 @@
                         const x = t.clientX;
                         const y = t.clientY;
 
-                        // Left half for Movement
+                        // Check Left Side (Movement)
                         if (x < window.innerWidth / 2) {
-                            if (this.touchInput.left.active) continue;
-                            this.touchInput.left.active = true;
-                            startTouchId = t.identifier;
-                            startX = x; startY = y;
-                            
-                            joystickZone.style.display = 'block';
-                            joystickZone.style.left = (x - 50) + 'px';
-                            joystickZone.style.top = (y - 50) + 'px';
-                            joystickKnob.style.transform = `translate(-50%, -50%)`;
-                            this.touchInput.left.x = 0;
-                            this.touchInput.left.y = 0;
+                            if (!this.touchInput.left.active) {
+                                this.touchInput.left.active = true;
+                                leftTouchId = t.identifier;
+                                leftStartX = x; leftStartY = y;
+                                
+                                joystickLeft.style.display = 'block';
+                                joystickLeft.style.left = (x - 60) + 'px'; // -width/2
+                                joystickLeft.style.top = (y - 60) + 'px';
+                                knobLeft.style.transform = `translate(-50%, -50%)`;
+                                this.touchInput.left.x = 0;
+                                this.touchInput.left.y = 0;
+                            }
                         } 
-                        // Right half for Aim/Attack
+                        // Check Right Side (Attack - Fixed Joystick)
                         else {
-                            this.touchInput.right.active = true;
-                            this.updateTouchAim(x, y);
+                            // Check if touch is near the fixed joystick
+                            // Simple distance check from center of fixed joystick
+                            const dist = Math.sqrt((x - rightCenterX)**2 + (y - rightCenterY)**2);
+                            // Allow a bit generous hit area, e.g. 100px radius
+                            if (dist < 100) {
+                                if (!this.touchInput.right.active) {
+                                    this.touchInput.right.active = true;
+                                    rightTouchId = t.identifier;
+                                    // Initial update
+                                    this.handleRightJoystickMove(x, y, knobRight);
+                                }
+                            }
                         }
                     }
                 }, {passive: false});
@@ -974,22 +1037,23 @@
                     for (let i = 0; i < e.changedTouches.length; i++) {
                         const t = e.changedTouches[i];
                         
-                        if (t.identifier === startTouchId) {
-                            // Update Joystick
+                        if (t.identifier === leftTouchId) {
+                            // Update Left Joystick
                             const maxDist = 40;
-                            let dx = t.clientX - startX;
-                            let dy = t.clientY - startY;
+                            let dx = t.clientX - leftStartX;
+                            let dy = t.clientY - leftStartY;
                             const dist = Math.sqrt(dx*dx + dy*dy);
                             if (dist > maxDist) {
                                 dx = (dx / dist) * maxDist;
                                 dy = (dy / dist) * maxDist;
                             }
-                            joystickKnob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+                            knobLeft.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
                             this.touchInput.left.x = dx / maxDist;
                             this.touchInput.left.y = dy / maxDist;
-                        } else if (t.clientX >= window.innerWidth / 2) {
-                            // Update Aim
-                            this.updateTouchAim(t.clientX, t.clientY);
+                        } 
+                        else if (t.identifier === rightTouchId) {
+                            // Update Right Joystick
+                            this.handleRightJoystickMove(t.clientX, t.clientY, knobRight);
                         }
                     }
                 }, {passive: false});
@@ -998,32 +1062,45 @@
                     e.preventDefault();
                     for (let i = 0; i < e.changedTouches.length; i++) {
                         const t = e.changedTouches[i];
-                        if (t.identifier === startTouchId) {
+                        if (t.identifier === leftTouchId) {
                             this.touchInput.left.active = false;
                             this.touchInput.left.x = 0; 
                             this.touchInput.left.y = 0;
-                            joystickZone.style.display = 'none';
-                            startTouchId = null;
-                        } else {
-                            // Assume right side lift
-                            // Simple logic: if not left, must be right. 
-                            // In real multi-touch, track ID properly. But this works for simple 2-finger.
+                            joystickLeft.style.display = 'none';
+                            leftTouchId = null;
+                        } else if (t.identifier === rightTouchId) {
                             this.touchInput.right.active = false;
+                            this.touchInput.right.x = 0;
+                            this.touchInput.right.y = 0;
+                            knobRight.style.transform = `translate(-50%, -50%)`;
+                            rightTouchId = null;
                         }
                     }
                 });
             }
 
-            updateTouchAim(screenX, screenY) {
-                // Map screen coords to world coords (simplified plane intersection)
-                const rect = this.renderer.domElement.getBoundingClientRect();
-                const x = ((screenX - rect.left) / rect.width) * 2 - 1;
-                const y = -((screenY - rect.top) / rect.height) * 2 + 1;
-                this.raycaster.setFromCamera({ x, y }, this.camera);
-                const intersects = this.raycaster.intersectObject(this.plane);
-                if (intersects.length > 0) { 
-                    this.touchInput.right.x = intersects[0].point.x;
-                    this.touchInput.right.y = intersects[0].point.z;
+            handleRightJoystickMove(x, y, knobElement) {
+                const maxDist = 40;
+                let dx = x - rightCenterX;
+                let dy = y - rightCenterY;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                
+                // Visual limit
+                let visualDx = dx, visualDy = dy;
+                if (dist > maxDist) {
+                    visualDx = (dx / dist) * maxDist;
+                    visualDy = (dy / dist) * maxDist;
+                }
+                knobElement.style.transform = `translate(calc(-50% + ${visualDx}px), calc(-50% + ${visualDy}px))`;
+                
+                // For logic, we want normalized vector direction
+                // If dist is very small, treat as 0
+                if (dist > 5) {
+                     this.touchInput.right.x = dx / dist;
+                     this.touchInput.right.y = dy / dist;
+                } else {
+                     this.touchInput.right.x = 0;
+                     this.touchInput.right.y = 0;
                 }
             }
 
@@ -1233,9 +1310,17 @@
                     moveX = this.touchInput.left.x;
                     moveY = this.touchInput.left.y;
                 }
-                if (this.touchInput.right.active) {
-                    aimPos = { x: this.touchInput.right.x, y: this.touchInput.right.y };
+                
+                // Attack Joystick Logic
+                if (this.touchInput.right.active && (this.touchInput.right.x !== 0 || this.touchInput.right.y !== 0)) {
                     isAttacking = true;
+                    // Calc world aim pos relative to player
+                    // In update, player uses aimPos to lookAt. 
+                    // So we construct a target point far away in that direction
+                    aimPos = { 
+                        x: this.player.x + this.touchInput.right.x * 100, 
+                        y: this.player.y + this.touchInput.right.y * 100 
+                    };
                 }
 
                 // Normalize keyboard if used alone
@@ -1361,7 +1446,7 @@
                             if (dist < (obj.r + 15)) obj.action(); 
                         }
                     }
-                    // Rotate save point
+                    // Rotate save point (より安全な検索)
                     const saveMesh = this.interactableMeshes.find(m => {
                         return m && m.geometry && m.geometry.type === 'OctahedronGeometry';
                     });
