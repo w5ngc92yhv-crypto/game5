@@ -1,3 +1,483 @@
+Gemini
+
+ローグライクゲームの構想と実装
+学校
+
+チャットを新規作成
+作成したもの
+Rogue Wave Survivor 3D
+MachoSimulator
+AI Chat Widget
+Gem
+チャット
+パチンコシミュレーターゲーム開発
+固定したチャット
+画像からゲーム用座標データ抽出ツール
+固定したチャット
+ローグライクゲームの構想と実装
+最悪で最高の相場とは
+NetSea RPG: Bullet Hell Game
+マッチョ育成ゲーム
+HTMLチャット機能のFirebase修正
+HTML/CSS/JS チャット機能改良
+3D Smash Battle Gun Cooldown Update
+ターン制対戦ゲーム開発の提案
+CSSで表現する檻の背景
+Three.jsでスマブラ風ゲーム作成
+Swarm Survivor Game Implementation
+VSCodeゲームをブラウザで遊ぶ方法
+HTML Game Code Completion
+
+設定とヘルプ
+Gemini との会話
+画面外にある敵とお金の場所を教えれるようにして
+
+画面外にいる敵やアイテムの方向を示す「インジケーター（矢印）」機能を実装したサバイバルゲームを作成します。
+
+このゲームでは、広大なマップを移動しながら、画面端に表示される矢印を頼りにコインを集め、敵を避ける必要があります。
+
+以下の機能を含んでいます：
+
+画面外インジケーター: ターゲット（敵やコイン）が画面外にある場合、その方向の画面端に矢印を表示します。
+
+距離による変化: ターゲットが遠い場合は矢印を小さく、近い場合は大きく表示し、距離感を掴みやすくしています。
+
+無限スクロール風マップ: プレイヤー中心にカメラが移動します。
+
+スマホ対応: タッチ操作（バーチャルジョイスティック）に対応しています。
+
+Rogue Wave Survivor 3D
+12月23日 20:47
+このゲームのポイントをまとめます：
+
+赤い矢印: 敵（追いかけてくる赤い丸）の方向を示します。
+
+黄色い矢印: コインの方向を示します。
+
+動作ロジック (drawIndicator関数):
+
+プレイヤー（画面中央）とターゲット（敵やコイン）の角度を計算します。
+
+ターゲットが画面の枠内に収まっているか判定します。
+
+画面外の場合、その角度に基づいて画面の端（上・下・左・右）の座標を計算し、そこに矢印を描画します。
+
+ターゲットまでの距離が近いと矢印が大きく、遠いと小さくなるようにして、危険度や距離感を直感的にわかるようにしています。
+
+PCでは矢印キーかWASD、スマホでは画面下部のバーチャルスティックで操作できます。遊んでみてください！
+
+玉の色を白にして
+
+弾の色を白に変更します。
+
+ローグライクゲームのように技（能力）を追加したい。とりあえず3つ。
+
+まずは自分の周りをぐるぐる回るやつ。ウェーブクリア時に購入できる。最初は一つで購入の数だけ増えていく（最大6）。攻撃力は10で購入していくと5づつ増える。数を増やすか攻撃力を増やすか選択させる。
+
+2つ目に真っすぐ進む斬撃。スピードは遅い。これも攻撃力と数を増やせる。1つ目前、数を増やすと2つ目は後ろ、3つ目右、4つ目左で最大4つ。
+
+3つ目は全範囲に波動を出す0.5秒で消える。ダメージとノックバック効果がある。攻撃力と一回の攻撃で出す波動の数を増やせる。
+
+これらの能力3つと、それぞれ攻撃力アップと数（その能力を持ってないと出てこない）を1ウェーブクリアしたら3つの選択肢が出てきてどれか一つ選べる。能力はzxcvキーで使えて購入した順番でzから技を出すキーが決まる。
+
+ローグライク（サバイバー系）ゲームのような「スキル選択システム」と「3つの新スキル」を実装したバージョンを作成します。
+
+主な変更点：
+
+スキルシステムの実装:
+
+サテライト (Orbit): プレイヤーの周囲を回転する弾。
+
+スロー・スラッシュ (Slash): 前・後・右・左の順で増える直進斬撃。
+
+ショックウェーブ (Wave): 全方位への波動（ノックバック付き）。
+
+Z, X, C, Vキーで購入順に割り当てられます。
+
+ウェーブクリア画面の刷新:
+
+従来のショップを廃止し、ランダムな3つの選択肢（新規スキル習得、ダメージ強化、数強化）から1つを選ぶローグライク形式に変更しました。
+
+UI追加:
+
+画面下部に習得したスキルのアイコンとクールダウン状況を表示します。
+
+武器購入を鍛冶屋で出来るようにして
+
+武器の購入（アンロック）と装備の切り替えを、セーフゾーンにいる「鍛冶屋（Weapon Smith）」で一括して行えるように修正します。
+
+主な変更点は以下の通りです：
+
+鍛冶屋メニューの機能拡張:
+
+これまでは「所持している武器の切り替え」のみでしたが、「未所持の武器を購入する」機能を追加しました。
+
+メニュー内に現在の所持金（GOLD）を表示するようにしました。
+
+武器データの定義:
+
+武器の価格や名前を管理しやすいように WEAPON_DEFS 定数を追加しました。
+
+購入ロジック:
+
+お金が足りていれば武器を購入し、即座に装備するようにしました。
+
+Canvasの内容を更新します。
+
+強化トレーナーのアイテムに保有能力数を追加して全部で5つ能力を保有できるようにして。あと10ウェーブごとにボスを追加してボスは普通の敵より大きく作って。11ウェーブから銃を撃つ遠距離タイプの敵を追加
+
+Canvas「Rogue Wave Survivor 3D」のコードを更新します。
+
+この変更では、以下の機能を実装しました：
+
+スキル枠の拡張機能: 強化トレーナーで「スキル所持数枠」を最大5つまで拡張可能にしました（初期値3）。キー割り当ては Z, X, C, V, B になります。
+
+ボス敵の追加: 10ウェーブごとに巨大なボスが出現します。
+
+遠距離攻撃型の敵: 11ウェーブ以降、銃で攻撃してくる敵が出現します。
+
+敵の弾の実装: 敵の攻撃用弾丸のロジックと当たり判定を追加しました。
+
+10ウェーブ目クリア時に報酬をを選んじゃうと勝手に11ウェーブ目に行っちゃうから、報酬を選択してもすぐ次のウェーブへ行かずに、次のウェーブと保存して終了とを選べるようにして。
+
+あと、11ウェーブ目から出てくる銃を撃つ敵の玉の速度を今より4下げて。
+
+あと、強化トレーナーで「不死のトーテム」を追加して。いくらでも買える。不死のトーテムを持っていたら、死んだときに「不死のトーテムを使用しますか」と出て「はい」「いいえ」で「はい」の場合、死んだその時のゲーム状況をそのまま続けれるようにして。
+
+Canvasのコードを更新して、ご要望の3点（ウェーブ間の確認画面、敵の弾速調整、不死のトーテム実装）を反映させます。
+
+主な変更点：
+
+ウェーブクリア時の挙動: 報酬選択後、自動で次へ進まずに「次のウェーブへ進む」か「保存して終了」を選択する画面を挟むようにしました。
+
+敵の弾速: Bulletクラスを修正し、敵の弾（isEnemy = true）の場合、速度を12から8（-4）に下げました。
+
+不死のトーテム:
+
+強化トレーナーで「不死のトーテム」を購入可能にしました（購入数無制限、価格1000 Pts）。
+
+死亡時にトーテムを持っていると、使用して復活するかどうかの確認画面が表示されるようにしました。
+
+「はい」を選ぶと、その場からHP全快で再開します。
+
+エラーの原因は、HTML要素から削除された saveSection というIDをJavaScriptコード内で参照しようとしていたためです。この古い参照を削除して、エラーを修正しました。
+
+保存して終了と次のウェーブが選択できるやつは10ウェーブ目だけ出るようにして。それ以外は報酬を選択したらすぐ次のウェーブ
+
+了解しました。ウェーブ間のメニュー（保存して終了、または次へ進む）を、10ウェーブごとの節目（ボス戦クリア後など）のみ表示するように変更します。それ以外のウェーブでは、報酬を選択すると即座に次のウェーブが開始されます。
+
+Canvas内のコードを更新します。
+
+保存して終了をセーフゾーンへに変えて保存はセーフゾーンで出来るように変更して
+
+Canvasのコードを更新して、「保存して終了」を「セーフゾーンへ帰還」に変更し、セーフゾーン内に手動セーブポイント（記録のモノリス）を追加します。
+
+主な変更点：
+
+ウェーブクリア画面: ボタンを「保存して終了」から「セーフゾーンへ帰還」に変更しました。帰還すると獲得したポイントを持ち帰れます（ゴールドはロストします）。
+
+セーフゾーン: 新たに「記録のモノリス（青いクリスタル）」を配置しました。これに触れるとゲームデータ（強化状況やアンロック武器）を保存できます。
+
+保存ロジック: ダンジョン内での中断セーブ機能を削除し、拠点で安全に保存する形式に変更しました。
+
+エラーログを確認したところ、Game.update内のArray.findでm.geometry.typeを参照しようとした際にエラーが発生しています。 これは、interactableMeshes配列の中にTHREE.Group（NPCやドアなど）が含まれており、グループオブジェクトにはgeometryプロパティが存在しないため、undefined.typeを参照しようとしてクラッシュしているのが原因です。
+
+修正版のコードを生成します。
+
+セーフゾーンでのデータ保存時のエラー（プロパティ読み込みエラー）を修正し、処理の安全性を高めたコードを作成しました。
+
+主な変更点：
+
+安全なオブジェクト参照: Game.update 内で配列（interactables や interactableMeshes）を操作する際、要素が存在するか（undefinedでないか）を確認するガード処理を追加しました。これにより、読み込みエラーを防ぎます。
+
+find メソッドの修正: セーブポイント（モノリス）を検索する処理を、より安全な記述に変更しました。
+
+紫のドアに入ったらまたウェーブ1からになった
+
+紫のドア（ロード）に入った際にウェーブ1に戻ってしまう問題を修正します。 原因は、「セーフゾーンへ帰還」を選択した際に、現在の進行状況（ウェーブ数や所持スキルなど）がセーブデータとして保存されていなかったためです。
+
+以下の修正を行います：
+
+帰還時のセーブ処理追加: 「セーフゾーンへ帰還」した際に、次のウェーブ数や現在の装備状況を自動的にセーブするようにしました。
+
+手動セーブの強化: モノリスでセーブした際も、進行状況（中断データ）を更新するようにしました。
+
+銃を撃つ敵をウェーブ11からにして、敵が撃つ球の速さと発射間隔をプレイヤーの最初の球の速さと間隔と同じにして
+
+ご要望に合わせて、以下の調整を行います。
+
+銃を撃つ敵の出現: ウェーブ11から出現するように設定（既存のロジックを維持・確認）。
+
+敵の弾速: プレイヤーの弾と同じ速度（12）に変更します。
+
+敵の発射間隔: プレイヤーの初期状態と同じ間隔（0.6秒 = 600ms）に変更します。
+
+これにより、ウェーブ11以降の遠距離攻撃してくる敵がかなり手強くなります。
+
+敵の弾速を6にして発射間隔を1.2秒にして
+
+敵の弾速を6に下げ、発射間隔を1.2秒に遅く調整します。
+
+死んでないのにセーフゾーンに行ったらポイントが使えるから、死んだら使えるようにして。あと死んだらコインを0にして。
+
+Canvas「Rogue Wave Survivor 3D」のコードを更新します。
+
+ご要望の通り、以下の変更を行いました。
+
+強化トレーナーの利用制限: 「死んでないのにセーフゾーンに行ったらポイントが使える」のを防ぐため、生存帰還時（紫のドアやメニューから戻った場合）はトレーナーを利用できないようにしました。死亡してセーフゾーンに戻った場合のみ、強化が可能になります。
+
+死亡時のコインリセット: ゲームオーバーになった際、所持していたコイン（GOLD）を0にするようにしました。また、ニューゲーム開始時の所持金も0に変更しました。
+
+剣を購入したのに紫のドアに入ったら剣じゃなくて銃を持ってるのは何で？
+
+剣を購入したり装備を変更した直後にセーブデータへの書き込み（保存）が行われていなかったため、紫のドア（ロード）に入ると「最後にセーブされた状態（銃を持っている状態）」に戻ってしまっていました。
+
+これを修正するために、武器の購入時と装備変更時に自動でデータを保存するようにプログラムを改良します。
+
+主な変更点：
+
+unlockWeapon（武器購入）メソッドの最後に this.saveRunData() を追加しました。
+
+switchWeapon（装備変更）メソッドの最後に this.saveRunData() を追加しました。
+
+これで、セーフゾーンで準備を整えた最新の状態が即座に保存され、紫のドアに入っても装備が維持されるようになります。
+
+Most up-to-date file for "index.html" is:
+
+このゲームの名前何にしよう
+
+このゲームの特徴（画面外の敵が分かる機能、ウェーブ制、拠点への帰還システム、3Dアクション）を踏まえて、いくつかタイトル案を考えてみました！
+
+Radar Survivor 3D (レーダーサバイバー3D)
+
+このゲーム最大の特徴である「画面外の敵やアイテムの方向がわかる（レーダー）」機能を強調した名前です。初期のコンセプトにも近いです。
+
+Rogue Horizon (ローグ・ホライズン)
+
+画面の端（ホライズン/地平線）から敵が無限に押し寄せてくるイメージと、ローグライク要素を掛け合わせました。
+
+Return to Base (リターン・トゥ・ベース)
+
+「セーフゾーンへ帰還」して強化・保存するという、このゲーム独特の重要なサイクルをタイトルにしました。
+
+Immortal Wave (イモータル・ウェーブ)
+
+「不死のトーテム」を使って死を乗り越えながら、果てしないウェーブに挑む様子を表しました。
+
+Edge Sense (エッジ・センス)
+
+画面の端（エッジ）にある情報を頼りに戦う、というシステムをスタイリッシュに表現した案です。
+
+現在のコード上のタイトルは Rogue Wave Survivor 3D になっています。もし気に入った名前があればタイトル（<title>タグ）を変更しますので、おっしゃってください！
+
+スマホでも遊べるようにしたい
+
+Canvas「Rogue Wave Survivor 3D」のコードを更新し、スマートフォン（タッチ操作）に対応させます。
+
+主な変更点は以下の通りです：
+
+バーチャルジョイスティックの実装:
+
+画面左側をタッチ＆ドラッグで移動できるようになります。操作時にジョイスティックが表示されます。
+
+タッチ操作による攻撃とエイム:
+
+画面右側をタッチ＆ドラッグすることで、その方向を向きながら攻撃します（ツインスティックシュータースタイル）。
+
+スキル発動のタッチ対応:
+
+画面下部のスキルアイコンを直接タップしてスキルを発動できるようにしました。
+
+操作説明の更新:
+
+HUDにスマホ向けの操作説明を追加しました。
+
+攻撃エイムは攻撃用のジョイスティックを作って攻撃のスティックは常に表示して
+
+Canvas「Rogue Wave Survivor 3D」のコードを更新し、攻撃用のジョイスティック（右下固定・常時表示）を実装します。
+
+主な変更点：
+
+UIの追加と変更:
+
+移動用ジョイスティック（左）と攻撃用ジョイスティック（右）を別々の要素として定義しました。
+
+攻撃用ジョイスティックは画面右下に常に表示されます。
+
+CSSの調整:
+
+ジョイスティックのスタイルを共通クラス化し、配置を調整しました。
+
+タッチ操作ロジックの刷新:
+
+左画面タッチ：移動用ジョイスティックが指の位置に出現（フローティング方式）。
+
+右画面タッチ（攻撃スティック周辺）：固定された攻撃スティックを操作してエイム＆攻撃（固定ジョイスティック方式）。
+
+攻撃処理の変更:
+
+攻撃入力がある場合、その入力ベクトル（角度）に基づいて攻撃を行うように修正しました。
+
+攻撃のジョイスティック表示をモバイルだけにできない？
+
+攻撃用のジョイスティックを、タッチ対応デバイス（スマートフォンなど）の場合のみ表示するように変更します。
+
+主な変更点：
+
+CSSの変更: #joystick-right の初期表示を display: none に設定しました。
+
+JSの変更: Game クラスに checkTouchInterface() メソッドを追加し、タッチ対応デバイスかどうかを判定してジョイスティックの表示/非表示を切り替えるようにしました。これにより、PCでは表示されず、スマホでのみ表示されます。
+
+右のジョイスティックが反応しない。ジョイスティックを動かして離したらその角度で攻撃できるようにして
+
+右側のジョイスティック（攻撃用）が反応しない原因は、初期状態で非表示になっているため、位置座標の計算が正しく行われていないことでした。これを修正し、さらにご要望通り「ジョイスティックを操作して離した瞬間に攻撃する（ひっぱりアクション風）」挙動に変更します。
+
+主な変更点：
+
+ジョイスティック座標計算の修正: タッチ対応デバイスと判定されてジョイスティックが表示された後に、正しく中心座標を計算するようにしました。
+
+攻撃操作の変更:
+
+これまでの「倒している間ずっと攻撃」から、「倒して狙いを定め、指を離した瞬間に攻撃」する挙動に変更しました。
+
+ジョイスティックを倒している間は、プレイヤーがその方向を向きます（エイム）。
+
+タッチ判定エリアの拡大: 固定ジョイスティックですが、指が少しずれても反応するように判定エリアを調整しました。
+
+画面下部のスキルアイコンを直接タップしてスキルを発動できるようにして
+
+画面下部のスキルアイコンを直接タップしてスキルを発動できるように、タッチイベントの処理を強化します。 また、タッチ時の反応（フィードバック）も少し良くしています。
+
+3つの選択のやつを「選択じゃなくて」そのボックスをタップにする
+
+ウェーブクリア時の報酬選択画面について、ボタンではなくボックス（カード）全体をタップして選択できるように変更します。
+
+Canvasの内容を更新します。
+
+まだボタンになってる
+
+ウェーブクリア時の3択画面で、まだ「選択」ボタンが表示されていた点を修正します。 ボタンを廃止し、カード全体をタップ（クリック）することで選択できるように変更しました。
+
+発射レートのコードはどこ？
+
+発射レート（fireRate）に関するコードは、主に**プレイヤー（Playerクラス）と敵（Enemyクラス）**の2箇所で定義・使用されています。
+
+1. プレイヤーの発射レート
+プレイヤーの弾の発射間隔（ミリ秒単位）を制御しています。
+
+初期設定: Player クラスの constructor 内
+
+this.fireRate = 600; と定義されています（数値が小さいほど速い）。
+
+発射判定: Player クラスの attack メソッド内
+
+現在時刻と前回の攻撃時刻を比較して、fireRate 以上経過していないと攻撃できないようになっています。
+
+JavaScript
+        class Player {
+            constructor(x, y, maxHp, atk, scene) {
+                // ... (省略)
+                this.speed = 2.5; this.lastAttack = 0; 
+                this.fireRate = 600; // ★ここがプレイヤーの初期発射間隔 (600ms = 0.6秒)
+                this.weapon = 'gun';
+                // ... (省略)
+            }
+            // ...
+            attack(aimPos) {
+                const now = Date.now();
+                // ★ここで判定しています
+                if (now - this.lastAttack < this.fireRate) return;
+                this.lastAttack = now;
+                // ... (省略)
+            }
+2. 敵の発射レート
+ウェーブ11以降に出現する銃を持った敵（type === 'ranged'）の発射間隔です。
+
+初期設定: Enemy クラスの constructor 内
+
+this.fireRate = 1200; と定義されています。
+
+発射判定: Enemy クラスの update メソッド内
+
+JavaScript
+        class Enemy {
+            constructor(x, y, hpMulti, speedMulti, type = 'normal') {
+                // ... (省略)
+                // Ranged behavior
+                this.lastShot = 0;
+                this.fireRate = 1200; // ★ここが敵の発射間隔 (1200ms = 1.2秒)
+                this.attackRange = 400;
+                // ... (省略)
+            }
+            update(player, game) {
+                // ... (省略)
+                if (this.type === 'ranged') {
+                    // ... (省略)
+                    } else if (dist < this.attackRange) {
+                        move = false;
+                        // Shoot
+                        const now = Date.now();
+                        // ★ここで判定しています
+                        if (now - this.lastShot > this.fireRate) {
+                            this.lastShot = now;
+                            // ... (弾発射処理)
+                        }
+                    }
+                // ... (省略)
+            }
+モバイルの人は攻撃のジョイスティックを動かしてるとき、どの向きに球が飛ぶかわかるようにしたい。ジョイスティックを動かしてるときプレイヤーの周りに向きを知らせる長方形のマークを作って
+
+モバイル操作時の攻撃方向をわかりやすくするため、プレイヤーの足元に攻撃方向を示すガイド（長方形のマーク）を追加します。
+
+Canvasの内容を更新します。
+
+能力の攻撃が変わったから戻して
+
+了解しました。攻撃操作を「ジョイスティックを倒している間、その方向に攻撃し続ける」元の仕様に戻しました。これにより、右スティックを倒している間、プレイヤーの向きを示すインジケーターが表示され、弾（または斬撃）が発射され続けます。
+
+Canvasの内容を更新します。
+
+スローブレードの攻撃力が上がったから下げて
+
+はい、スローブレードの攻撃力を調整しますね。Canvas内のコードを編集します。
+
+SKILL_DEFS の slash の baseDmg を20から12へ、dmgStep を10から5へ下げます。
+
+モバイルだと能力カードを押しても反応しないからできるようにして。あと、モバイルはその能力選択のカードが大きくて次の行に行ってしまうから能力選択のカードを一回り小さくして一行に収まるようにして。
+
+モバイル端末での操作性と表示の問題を修正したCanvasコードを生成します。
+
+主な変更点は以下の通りです：
+
+能力選択カードのサイズ調整（レスポンシブ対応）:
+
+モバイル端末ではカードを小さくし、3枚が横一列（1行）に収まるようにスタイル（幅、フォントサイズ、パディング）を調整しました。
+
+PCなど大きな画面では従来通りのサイズで表示されます。
+
+タップ反応の改善:
+
+モバイルでのタッチ操作に確実に反応するように、カードに touchend イベントリスナーを追加しました。
+
+これにより、タップ時の反応性が向上します。
+
+モバイル端末での能力選択画面を改善しました。
+
+カードサイズ: モバイル時は幅を画面の1/3（w-1/3）にし、文字サイズやパディングも小さくして1行に収まるようにしました。
+
+タップ反応: ontouchend イベントを追加し、タップ時の反応を確実にしました。
+
+これでモバイルでもスムーズに能力選択ができるはずです。
+
+
+
+
+島根県教育委員会 のチャットはモデルのトレーニングには使用されません。Gemini は不正確な情報を表示することがあるため、生成された回答を再確認するようにしてください。プライバシーと Gemini新しいウィンドウで開く
+
+Rogue Wave Survivor 3D
+
+
+190819091910191119121913191419151916191719181919192019211922192319241925192619271928192919301931193219331934193519361937193819391940194119421943194419451946
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -8,1956 +488,7 @@
     <!-- Three.jsの読み込み -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #000; color: white; touch-action: none; user-select: none; }
-        
-        .pixel-font { font-family: 'Courier New', Courier, monospace; font-weight: bold; }
-        
-        /* カスタムスクロールバー */
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #333; }
-        ::-webkit-scrollbar-thumb { background: #888; border-radius: 4px; }
 
-        /* UIオーバーレイのアニメーション */
-        .fade-in { animation: fadeIn 0.3s ease-in-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        
-        .pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
-
-        /* Floating Text */
-        .floating-text {
-            position: absolute;
-            pointer-events: none;
-            font-weight: bold;
-            text-shadow: 1px 1px 0 #000;
-            animation: floatUp 1s ease-out forwards;
-            z-index: 30;
-        }
-        @keyframes floatUp {
-            0% { opacity: 1; transform: translateY(0) scale(1); }
-            100% { opacity: 0; transform: translateY(-50px) scale(1.5); }
-        }
-
-        /* 画面外インジケーター */
-        #indicator-container {
-            position: absolute;
-            inset: 0;
-            pointer-events: none;
-            z-index: 5;
-            overflow: hidden;
-        }
-        .indicator {
-            position: absolute;
-            transform-origin: center;
-            opacity: 0.8;
-            display: none; /* JSで制御 */
-        }
-        .enemy-ind {
-            width: 0; 
-            height: 0; 
-            border-left: 8px solid transparent;
-            border-right: 8px solid transparent;
-            border-bottom: 16px solid #ef4444; /* Red */
-        }
-        .boss-ind {
-            border-bottom-color: #a855f7; /* Purple */
-            transform: scale(1.5);
-        }
-        .gold-ind {
-            width: 10px;
-            height: 10px;
-            background-color: #facc15; /* Yellow */
-            border-radius: 50%;
-            box-shadow: 0 0 4px #facc15;
-            border: 1px solid #fff;
-        }
-
-        /* スキルクールダウン表示 */
-        #skillBar {
-            pointer-events: auto; /* タッチ可能に */
-            z-index: 30; /* ジョイスティックより確実に上に */
-        }
-        .skill-slot {
-            position: relative;
-            width: 60px; /* 少し大きく */
-            height: 60px;
-            background: #333;
-            border: 2px solid #555;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-            color: #fff;
-            overflow: hidden;
-            cursor: pointer;
-            transition: transform 0.1s, border-color 0.1s;
-            touch-action: manipulation;
-        }
-        .skill-slot:active {
-            transform: scale(0.9);
-            border-color: #fff !important;
-        }
-        .skill-cd-overlay {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 0%;
-            background: rgba(0, 0, 0, 0.7);
-            transition: height 0.1s linear;
-            pointer-events: none;
-        }
-        .skill-key {
-            position: absolute;
-            top: 2px;
-            left: 4px;
-            font-size: 10px;
-            color: #aaa;
-            pointer-events: none;
-        }
-        
-        /* Virtual Joystick Styles */
-        .joystick-zone {
-            position: absolute;
-            width: 120px;
-            height: 120px;
-            background: rgba(255, 255, 255, 0.1);
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            pointer-events: auto;
-            z-index: 20;
-            touch-action: none;
-        }
-        .joystick-knob {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 50px;
-            height: 50px;
-            background: rgba(255, 255, 255, 0.5);
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
-            pointer-events: none;
-        }
-        
-        /* Left: Movement (Floating) */
-        #joystick-left {
-            display: none; /* Touch時に表示 */
-            pointer-events: none; /* 位置合わせ用 */
-        }
-        
-        /* Right: Attack (Fixed) */
-        #joystick-right {
-            bottom: 40px;
-            right: 40px;
-            display: none; /* 初期状態は非表示（スマホ判定で表示） */
-            background: rgba(255, 100, 100, 0.1);
-            border-color: rgba(255, 100, 100, 0.3);
-        }
-        #joystick-right .joystick-knob {
-            background: rgba(255, 100, 100, 0.5);
-        }
-
-        /* 選択肢カード */
-        .choice-card {
-            transition: transform 0.2s, border-color 0.2s, background-color 0.2s;
-            cursor: pointer;
-        }
-        .choice-card:hover {
-            transform: scale(1.05);
-            border-color: #FACC15;
-            background-color: #374151; /* bg-gray-700 */
-        }
-        .choice-card:active {
-            transform: scale(0.95);
-            background-color: #4b5563; /* bg-gray-600 */
-        }
-    </style>
-</head>
-<body class="pixel-font">
-
-    <!-- Three.js Container -->
-    <div id="canvas-container" class="absolute inset-0 z-0"></div>
-
-    <!-- 画面外インジケーターコンテナ -->
-    <div id="indicator-container"></div>
-    
-    <!-- ジョイスティック -->
-    <div id="joystick-left" class="joystick-zone"><div class="joystick-knob" id="knob-left"></div></div>
-    <div id="joystick-right" class="joystick-zone"><div class="joystick-knob" id="knob-right"></div></div>
-
-    <!-- UI: HUD (ゲーム中常時表示) -->
-    <div id="hud" class="absolute top-0 left-0 w-full p-4 pointer-events-none hidden flex justify-between items-start text-shadow-md z-10">
-        <div>
-            <div class="text-xl text-yellow-400">WAVE: <span id="waveDisplay">1</span></div>
-            <div class="text-white">HP: <span id="hpDisplay">100/100</span></div>
-            <div class="text-yellow-200">GOLD: <span id="goldDisplay">0</span> G</div>
-        </div>
-        <div class="text-right">
-            <div class="text-blue-300">POINTS: <span id="pointDisplay">0</span> PTS</div>
-            <div class="text-xs text-gray-400 mt-1">Weapon: <span id="weaponDisplay">GUN</span></div>
-            <div class="text-xs text-gray-400 mt-1 opacity-70">
-                PC: WASD移動 / Click攻撃<br>
-                Mobile: 左画面ドラッグ移動 / 右スティックを弾いて攻撃
-            </div>
-        </div>
-    </div>
-
-    <!-- スキルバー -->
-    <div id="skillBar" class="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex gap-4 hidden z-25">
-        <!-- JSで生成 -->
-    </div>
-
-    <!-- UI: ウェーブクリア / スキル選択メニュー -->
-    <div id="waveMenu" class="absolute inset-0 bg-black/80 flex flex-col items-center justify-center hidden z-20">
-        <div class="text-center mb-8 fade-in">
-            <h2 class="text-4xl text-yellow-400 mb-2">WAVE <span id="menuWaveNum"></span> CLEAR!</h2>
-            <p id="waveMenuSubtitle" class="text-gray-300">報酬を選択してください</p>
-        </div>
-        
-        <!-- 報酬選択エリア -->
-        <div id="choiceContainer" class="flex flex-wrap justify-center gap-4 max-w-4xl w-full px-4 interactive-ui fade-in">
-            <!-- カードがここに生成されます -->
-        </div>
-
-        <!-- 次へ/帰還 選択エリア (初期は非表示) -->
-        <div id="postWaveControls" class="flex-col gap-4 items-center hidden interactive-ui fade-in w-full max-w-md">
-            <button onclick="game.nextWave()" class="bg-yellow-600 hover:bg-yellow-500 text-white px-8 py-4 rounded text-xl font-bold w-full transition shadow-lg border-2 border-yellow-400">
-                次のウェーブへ進む
-            </button>
-            <button onclick="game.returnToSafeZone()" class="bg-purple-700 hover:bg-purple-600 text-white px-6 py-3 rounded w-full transition shadow-lg border border-purple-400">
-                セーフゾーンへ帰還
-            </button>
-            <p class="text-xs text-gray-400 mt-2">※帰還すると現在のゴールドは失われますが、ポイントは持ち帰れます。</p>
-        </div>
-    </div>
-
-    <!-- UI: NPCメニュー (Trainer) -->
-    <div id="npcMenu" class="absolute inset-0 bg-black/80 flex items-center justify-center hidden z-20">
-        <div class="bg-slate-800 border-2 border-slate-500 p-6 rounded-lg max-w-md w-full shadow-2xl fade-in text-center interactive-ui">
-            <h2 class="text-2xl text-green-400 mb-2">強化トレーナー</h2>
-            <p class="text-xs text-gray-300 mb-4">獲得したポイントで基礎能力を底上げします。<br>(死亡時のみ利用可能)</p>
-            <div class="text-right mb-4 text-blue-300 font-bold">所持ポイント: <span id="npcPoints">0</span></div>
-            <div class="grid grid-cols-1 gap-2 mb-6 max-h-96 overflow-y-auto pr-2">
-                <button onclick="game.upgradeMeta('maxHp')" class="bg-gray-700 hover:bg-gray-600 p-3 rounded flex justify-between border border-gray-600 transition">
-                    <div class="text-left">
-                        <div class="text-white">最大HP強化</div>
-                        <div class="text-xs text-gray-400">現在: <span id="metaMaxHpVal">0</span></div>
-                    </div>
-                    <div class="text-blue-300 font-bold self-center">100 Pts</div>
-                </button>
-                <button onclick="game.upgradeMeta('baseAtk')" class="bg-gray-700 hover:bg-gray-600 p-3 rounded flex justify-between border border-gray-600 transition">
-                    <div class="text-left">
-                        <div class="text-white">基礎攻撃力強化</div>
-                        <div class="text-xs text-gray-400">現在: <span id="metaAtkVal">0</span></div>
-                    </div>
-                    <div class="text-blue-300 font-bold self-center">200 Pts</div>
-                </button>
-                <button onclick="game.upgradeMeta('skillSlot')" class="bg-gray-700 hover:bg-gray-600 p-3 rounded flex justify-between border border-gray-600 transition">
-                    <div class="text-left">
-                        <div class="text-white">スキル保有枠拡張</div>
-                        <div class="text-xs text-gray-400">現在: <span id="metaSkillSlotVal">3</span> / 最大 5</div>
-                    </div>
-                    <div class="text-blue-300 font-bold self-center">500 Pts</div>
-                </button>
-                <!-- 不死のトーテム -->
-                <button onclick="game.upgradeMeta('totem')" class="bg-indigo-900 hover:bg-indigo-800 p-3 rounded flex justify-between border border-indigo-500 transition">
-                    <div class="text-left">
-                        <div class="text-yellow-300 font-bold">不死のトーテム</div>
-                        <div class="text-xs text-gray-300">所持数: <span id="metaTotemVal">0</span></div>
-                        <div class="text-[10px] text-gray-400">死亡時に復活可能</div>
-                    </div>
-                    <div class="text-blue-300 font-bold self-center">1000 Pts</div>
-                </button>
-            </div>
-            <button onclick="game.closeNpcMenu()" class="bg-gray-500 hover:bg-gray-400 text-white px-6 py-2 rounded w-full transition">閉じる</button>
-        </div>
-    </div>
-
-    <!-- UI: 武器職人メニュー -->
-    <div id="weaponSmithMenu" class="absolute inset-0 bg-black/80 flex items-center justify-center hidden z-20">
-        <div class="bg-stone-800 border-2 border-stone-500 p-6 rounded-lg max-w-md w-full shadow-2xl fade-in text-center interactive-ui">
-            <h2 class="text-2xl text-orange-400 mb-2">武器職人</h2>
-            <p class="text-sm text-gray-300 mb-4">武器の購入・装備変更ができます。</p>
-            <div class="text-right mb-4 text-yellow-300 font-bold">所持金: <span id="smithGold">0</span> G</div>
-            
-            <div id="weaponList" class="grid grid-cols-1 gap-2 mb-6">
-                <!-- Generated by JS -->
-            </div>
-
-            <button onclick="game.closeWeaponMenu()" class="bg-stone-600 hover:bg-stone-500 text-white px-6 py-2 rounded w-full transition">閉じる</button>
-        </div>
-    </div>
-
-    <!-- UI: Game Over -->
-    <div id="gameOverMenu" class="absolute inset-0 bg-red-900/90 flex items-center justify-center hidden z-30">
-        <div class="text-center fade-in">
-            <h1 class="text-5xl text-white font-bold mb-4">YOU DIED</h1>
-            <p class="text-xl text-yellow-200 mb-6">獲得ポイント: <span id="goPoints">0</span></p>
-            <p class="text-lg text-white pulse font-bold">セーフゾーンへ帰還中...</p>
-        </div>
-    </div>
-
-    <!-- UI: Revive Confirm (Totem) -->
-    <div id="reviveMenu" class="absolute inset-0 bg-black/90 flex items-center justify-center hidden z-40">
-        <div class="text-center fade-in bg-gray-900 p-8 rounded-lg border-2 border-yellow-500 shadow-2xl interactive-ui">
-            <h1 class="text-3xl text-yellow-400 font-bold mb-4">不死のトーテム</h1>
-            <p class="text-white mb-6">トーテムを使用して復活しますか？<br><span class="text-sm text-gray-400">(残り所持数: <span id="reviveTotemCount">0</span>)</span></p>
-            <div class="flex gap-4 justify-center">
-                <button onclick="game.useTotem()" class="bg-green-600 hover:bg-green-500 text-white px-6 py-2 rounded font-bold transition">はい (復活)</button>
-                <button onclick="game.confirmGameOver()" class="bg-red-600 hover:bg-red-500 text-white px-6 py-2 rounded font-bold transition">いいえ</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- UI: Notification -->
-    <div id="notification" class="absolute bottom-10 left-1/2 transform -translate-x-1/2 bg-gray-800 border border-gray-600 text-white px-4 py-2 rounded shadow-lg transition-opacity duration-300 pointer-events-none z-40 opacity-0"></div>
-    
-    <!-- Floating Text Container -->
-    <div id="floatingTextContainer" class="absolute inset-0 pointer-events-none overflow-hidden z-10"></div>
-
-    <script>
-        // --- Utils ---
-        const $ = (id) => document.getElementById(id);
-        const random = (min, max) => Math.random() * (max - min) + min;
-
-        // Collision Logic
-        const checkRectCollide = (r1, r2) => r1.x < r2.x + r2.w && r1.x + r1.w > r2.x && r1.y < r2.y + r2.h && r1.y + r1.h > r2.y;
-        const checkCircleCollide = (c1, c2) => {
-            const dx = c1.x - c2.x;
-            const dy = c1.y - c2.y;
-            return Math.sqrt(dx*dx + dy*dy) < c1.r + c2.r;
-        };
-
-        const STORAGE_KEY_META = 'rogue_meta_v3d_5'; // Version Up
-        const STORAGE_KEY_SAVE = 'rogue_save_v3d_5';
-        const SKILL_KEYS = ['Z', 'X', 'C', 'V', 'B'];
-
-        // Materials
-        const MAT = {
-            player: new THREE.MeshStandardMaterial({ color: 0x3B82F6, roughness: 0.3 }),
-            enemy: new THREE.MeshStandardMaterial({ color: 0xEF4444, roughness: 0.2 }),
-            boss: new THREE.MeshStandardMaterial({ color: 0x9333ea, roughness: 0.2, metalness: 0.5 }), // Boss Purple
-            bullet: new THREE.MeshBasicMaterial({ color: 0xFFFFFF }), // White
-            enemyBullet: new THREE.MeshBasicMaterial({ color: 0xFF00FF }), // Magenta
-            gold: new THREE.MeshStandardMaterial({ color: 0xFACC15, metalness: 0.8, roughness: 0.2 }),
-            point: new THREE.MeshStandardMaterial({ color: 0x60A5FA, emissive: 0x224488 }),
-            wall: new THREE.MeshStandardMaterial({ color: 0x475569 }),
-            doorStart: new THREE.MeshStandardMaterial({ color: 0x854D0E, emissive: 0x422005 }),
-            doorLoad: new THREE.MeshStandardMaterial({ color: 0x9333EA, emissive: 0x400560 }),
-            doorFrame: new THREE.MeshStandardMaterial({ color: 0x333333 }),
-            doorKnob: new THREE.MeshStandardMaterial({ color: 0xFFD700 }),
-            npc: new THREE.MeshStandardMaterial({ color: 0x4ADE80 }),
-            smith: new THREE.MeshStandardMaterial({ color: 0xF97316 }),
-            savePoint: new THREE.MeshStandardMaterial({ color: 0x00ffff, emissive: 0x0088ff, emissiveIntensity: 0.5 }),
-            floorSafe: new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.8 }),
-            floorBattle: new THREE.MeshStandardMaterial({ color: 0x3f6212, roughness: 0.9 }),
-            eye: new THREE.MeshBasicMaterial({ color: 0xffffff }),
-            skin: new THREE.MeshStandardMaterial({ color: 0xffccaa, roughness: 0.5 }),
-            hair: new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.9 }),
-            pants: new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.8 }),
-            sword: new THREE.MeshStandardMaterial({ color: 0xE2E8F0, metalness: 0.9, roughness: 0.1 }),
-            swordHandle: new THREE.MeshStandardMaterial({ color: 0x854D0E }),
-            slash: new THREE.MeshBasicMaterial({ color: 0xAADDFF, transparent: true, opacity: 0.8, side: THREE.DoubleSide }),
-            gunEnemy: new THREE.MeshStandardMaterial({ color: 0x333333 }),
-            // New Skills
-            skillOrb: new THREE.MeshStandardMaterial({ color: 0x00FFFF, emissive: 0x008888 }),
-            skillSlash: new THREE.MeshBasicMaterial({ color: 0xAAFFAA, side: THREE.DoubleSide, transparent: true, opacity: 0.8 }),
-            skillWave: new THREE.MeshBasicMaterial({ color: 0xFF00FF, side: THREE.DoubleSide, transparent: true, opacity: 0.5 }),
-            // Indicator
-            indicator: new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0.3, side: THREE.DoubleSide }),
-        };
-
-        const GEO = {
-            bullet: new THREE.SphereGeometry(0.4, 8, 8),
-            item: new THREE.IcosahedronGeometry(0.6, 0),
-            slash: new THREE.RingGeometry(30, 90, 10, 1, -Math.PI / 2, Math.PI),
-            orb: new THREE.BoxGeometry(10, 10, 10),
-            waveRing: new THREE.RingGeometry(10, 15, 32),
-            straightSlash: new THREE.PlaneGeometry(60, 20),
-            savePoint: new THREE.OctahedronGeometry(15, 0),
-            indicator: new THREE.PlaneGeometry(6, 60), // Long rectangle for aim indicator
-        };
-
-        const WEAPON_DEFS = {
-            gun: { name: '銃 (Gun)', price: 0, desc: '標準的な遠距離武器' },
-            sword: { name: '剣 (Sword)', price: 1000, desc: '広範囲の近接攻撃' }
-        };
-
-        const SKILL_DEFS = {
-            orb: { 
-                id: 'orb', name: "サテライト", type: 'active',
-                desc: "周囲を回転する弾を召喚",
-                maxCount: 6, baseDmg: 10, dmgStep: 5, 
-                duration: 6000, cd: 12000 
-            },
-            slash: { 
-                id: 'slash', name: "スローブレード", type: 'active',
-                desc: "ゆっくり直進する巨大な刃",
-                maxCount: 4, baseDmg: 20, dmgStep: 10, 
-                speed: 3, cd: 4000 
-            },
-            wave: { 
-                id: 'wave', name: "ショックウェーブ", type: 'active',
-                desc: "周囲の敵を弾き飛ばす波動",
-                maxCount: 3, baseDmg: 15, dmgStep: 8, 
-                range: 200, cd: 6000, knockback: 60
-            }
-        };
-
-        // --- Model Helper ---
-        function createHumanoidGroup(mainMaterialTemplate, scale = 1.0, withSword = false, withGun = false) {
-            const group = new THREE.Group();
-            const mainMaterial = mainMaterialTemplate.clone();
-            const skinMat = MAT.skin.clone();
-            const hairMat = MAT.hair.clone();
-            const pantsMat = MAT.pants.clone();
-            const eyeMat = MAT.eye.clone();
-
-            const headGroup = new THREE.Group();
-            headGroup.position.y = 15;
-            group.add(headGroup);
-            const face = new THREE.Mesh(new THREE.BoxGeometry(8, 8, 8), skinMat);
-            face.castShadow = true;
-            headGroup.add(face);
-            const hair = new THREE.Mesh(new THREE.BoxGeometry(8.5, 2.5, 8.5), hairMat);
-            hair.position.y = 3;
-            hair.castShadow = true;
-            headGroup.add(hair);
-            const eyeGeo = new THREE.BoxGeometry(2, 2, 1);
-            const eyeL = new THREE.Mesh(eyeGeo, eyeMat);
-            eyeL.position.set(-2, 0, 4.1);
-            headGroup.add(eyeL);
-            const eyeR = new THREE.Mesh(eyeGeo, eyeMat);
-            eyeR.position.set(2, 0, 4.1);
-            headGroup.add(eyeR);
-
-            const body = new THREE.Mesh(new THREE.BoxGeometry(8, 10, 4), mainMaterial);
-            body.position.y = 6; body.name = "Torso"; body.castShadow = true;
-            group.add(body);
-
-            const armGeo = new THREE.BoxGeometry(2.5, 9, 2.5);
-            const armLGroup = new THREE.Group(); armLGroup.position.set(-5.5, 10, 0); armLGroup.name = "ArmL"; group.add(armLGroup);
-            const armL = new THREE.Mesh(armGeo, mainMaterial); armL.position.y = -3; armL.castShadow = true; armLGroup.add(armL);
-            const handL = new THREE.Mesh(new THREE.BoxGeometry(2.5, 2.5, 2.5), skinMat); handL.position.y = -8.5; armLGroup.add(handL);
-            
-            const armRGroup = new THREE.Group(); armRGroup.position.set(5.5, 10, 0); armRGroup.name = "ArmR"; group.add(armRGroup);
-            const armR = new THREE.Mesh(armGeo, mainMaterial); armR.position.y = -3; armR.castShadow = true; armRGroup.add(armR);
-            const handR = new THREE.Mesh(new THREE.BoxGeometry(2.5, 2.5, 2.5), skinMat); handR.position.y = -8.5; armRGroup.add(handR);
-
-            const legGeo = new THREE.BoxGeometry(3.2, 10, 3.2);
-            const legLGroup = new THREE.Group(); legLGroup.position.set(-2.2, 1, 0); legLGroup.name = "LegL"; group.add(legLGroup);
-            const legL = new THREE.Mesh(legGeo, pantsMat); legL.position.y = -5; legL.castShadow = true; legLGroup.add(legL);
-            const legRGroup = new THREE.Group(); legRGroup.position.set(2.2, 1, 0); legRGroup.name = "LegR"; group.add(legRGroup);
-            const legR = new THREE.Mesh(legGeo, pantsMat); legR.position.y = -5; legR.castShadow = true; legRGroup.add(legR);
-
-            if (withSword) {
-                const swordGroup = new THREE.Group();
-                swordGroup.position.set(0, -8.5, 2); swordGroup.rotation.x = Math.PI / 2; 
-                const blade = new THREE.Mesh(new THREE.BoxGeometry(2, 16, 0.5), MAT.sword);
-                blade.position.y = 8; blade.castShadow = true; swordGroup.add(blade);
-                const handle = new THREE.Mesh(new THREE.BoxGeometry(1, 4, 1), MAT.swordHandle);
-                handle.position.y = -2; handle.castShadow = true; swordGroup.add(handle);
-                const guard = new THREE.Mesh(new THREE.BoxGeometry(4, 1, 1), MAT.sword);
-                guard.position.y = 0; guard.castShadow = true; swordGroup.add(guard);
-                armRGroup.add(swordGroup); swordGroup.name = "Sword"; swordGroup.visible = false;
-            }
-
-            if (withGun) {
-                const gunGroup = new THREE.Group();
-                gunGroup.position.set(0, -8.5, 2); 
-                const barrel = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 8), MAT.gunEnemy);
-                barrel.position.z = 4;
-                gunGroup.add(barrel);
-                armRGroup.add(gunGroup);
-                gunGroup.name = "Gun";
-            }
-
-            group.scale.set(scale, scale, scale); return group;
-        }
-
-        function createDoorGroup(material) {
-            const group = new THREE.Group();
-            const w = 40, h = 50;
-            const sideGeo = new THREE.BoxGeometry(4, h, 6); const topGeo = new THREE.BoxGeometry(w + 8, 4, 6);
-            const left = new THREE.Mesh(sideGeo, MAT.doorFrame); left.position.set(-(w/2+2), h/2, 0);
-            const right = new THREE.Mesh(sideGeo, MAT.doorFrame); right.position.set(w/2+2, h/2, 0);
-            const top = new THREE.Mesh(topGeo, MAT.doorFrame); top.position.set(0, h+2, 0);
-            group.add(left, right, top);
-            const panel = new THREE.Mesh(new THREE.BoxGeometry(w, h, 2), material); panel.position.set(0, h/2, 0); group.add(panel);
-            const knob = new THREE.Mesh(new THREE.SphereGeometry(2), MAT.doorKnob); knob.position.set(15, h/2, 2.5); group.add(knob);
-            return group;
-        }
-
-        // --- Game Classes ---
-        class Bullet {
-            constructor(x, y, angle, isEnemy = false) {
-                this.x = x; this.y = y; this.r = 5; 
-                this.isEnemy = isEnemy;
-                this.speed = isEnemy ? 6 : 12; // 敵弾は速度6
-                
-                this.vx = Math.cos(angle) * this.speed; 
-                this.vy = Math.sin(angle) * this.speed;
-                this.mesh = new THREE.Mesh(GEO.bullet, isEnemy ? MAT.enemyBullet : MAT.bullet);
-                this.mesh.scale.set(12, 12, 12); 
-                this.mesh.position.set(x, 15, y);
-            }
-            update() {
-                this.x += this.vx; this.y += this.vy;
-                this.mesh.position.x = this.x; this.mesh.position.z = this.y;
-            }
-        }
-
-        class SkillProjectile {
-            constructor(type, x, y, data, player, skillRef) {
-                this.type = type;
-                this.x = x; this.y = y;
-                this.life = 0;
-                this.data = data; // {damage, count, etc}
-                this.player = player;
-                this.skillRef = skillRef; // Reference to skill object for stats
-                this.dead = false;
-
-                if (type === 'orb') {
-                    this.r = 10;
-                    this.mesh = new THREE.Mesh(GEO.orb, MAT.skillOrb);
-                    this.angleOffset = (data.index / data.total) * Math.PI * 2;
-                    this.orbitRadius = 80;
-                    this.duration = SKILL_DEFS.orb.duration;
-                } else if (type === 'slash') {
-                    this.r = 20;
-                    this.mesh = new THREE.Mesh(GEO.straightSlash, MAT.skillSlash);
-                    this.mesh.rotation.x = -Math.PI / 2;
-                    let baseAngle = Math.atan2(game.mouse.y - player.y, game.mouse.x - player.x);
-                    if (data.index === 1) baseAngle += Math.PI;
-                    if (data.index === 2) baseAngle -= Math.PI / 2;
-                    if (data.index === 3) baseAngle += Math.PI / 2;
-                    this.vx = Math.cos(baseAngle) * SKILL_DEFS.slash.speed;
-                    this.vy = Math.sin(baseAngle) * SKILL_DEFS.slash.speed;
-                    this.mesh.rotation.z = -baseAngle;
-                    this.duration = 3000; // Fly for 3s
-                } else if (type === 'wave') {
-                    this.r = 10; // Growing radius
-                    this.maxR = SKILL_DEFS.wave.range;
-                    this.mesh = new THREE.Mesh(new THREE.RingGeometry(1, 5, 32), MAT.skillWave);
-                    this.mesh.rotation.x = -Math.PI / 2;
-                    this.duration = 500;
-                    this.expandSpeed = this.maxR / (this.duration / 16);
-                }
-                
-                this.mesh.position.set(x, 15, y);
-                this.spawnTime = Date.now();
-            }
-
-            update() {
-                const elapsed = Date.now() - this.spawnTime;
-                if (elapsed > this.duration) {
-                    this.dead = true;
-                    return;
-                }
-
-                if (this.type === 'orb') {
-                    const speed = 0.005;
-                    const currentAngle = this.angleOffset + elapsed * speed;
-                    this.x = this.player.x + Math.cos(currentAngle) * this.orbitRadius;
-                    this.y = this.player.y + Math.sin(currentAngle) * this.orbitRadius;
-                    this.mesh.rotation.y += 0.1;
-                    this.mesh.rotation.z += 0.1;
-                } else if (this.type === 'slash') {
-                    this.x += this.vx;
-                    this.y += this.vy;
-                } else if (this.type === 'wave') {
-                    this.r += this.expandSpeed;
-                    this.mesh.geometry.dispose();
-                    this.mesh.geometry = new THREE.RingGeometry(this.r, this.r + 15, 32);
-                    this.mesh.material.opacity = 1 - (elapsed / this.duration);
-                    this.x = this.player.x;
-                }
-
-                this.mesh.position.x = this.x;
-                this.mesh.position.z = this.y;
-            }
-        }
-
-        class Item {
-            constructor(x, y, type, value) {
-                this.x = x; this.y = y; this.r = 10;
-                this.type = type; this.value = value;
-                this.mesh = new THREE.Mesh(GEO.item, type === 'gold' ? MAT.gold : MAT.point);
-                this.mesh.scale.set(12, 12, 12); this.mesh.position.set(x, 10, y);
-                this.indicator = null;
-            }
-            update() {
-                this.mesh.position.x = this.x; this.mesh.position.z = this.y;
-                this.mesh.rotation.y += 0.05; this.mesh.rotation.z += 0.05;
-            }
-            updateIndicator(camera) {
-                if (this.type !== 'gold') return;
-                const container = $('indicator-container');
-                const v = new THREE.Vector3(this.x, 10, this.y);
-                v.project(camera);
-                const isOffScreen = v.x < -0.9 || v.x > 0.9 || v.y < -0.9 || v.y > 0.9;
-                if (isOffScreen || v.z > 1) {
-                    if (!this.indicator) {
-                        this.indicator = document.createElement('div');
-                        this.indicator.className = 'indicator gold-ind';
-                        container.appendChild(this.indicator);
-                    }
-                    this.indicator.style.display = 'block';
-                    let angle = Math.atan2(v.y, v.x);
-                    if (v.z > 1) angle += Math.PI;
-                    const radius = Math.min(window.innerWidth, window.innerHeight) / 2 - 20;
-                    const tx = (window.innerWidth/2) + Math.cos(angle) * radius;
-                    const ty = (window.innerHeight/2) - Math.sin(angle) * radius;
-                    this.indicator.style.left = `${tx}px`; this.indicator.style.top = `${ty}px`;
-                    this.indicator.style.transform = `translate(-50%, -50%)`;
-                } else { if (this.indicator) this.indicator.style.display = 'none'; }
-            }
-            removeIndicator() { if (this.indicator) { this.indicator.remove(); this.indicator = null; } }
-        }
-
-        class Enemy {
-            constructor(x, y, hpMulti, speedMulti, type = 'normal') {
-                this.x = x; this.y = y; 
-                this.type = type; // 'normal', 'boss', 'ranged'
-                this.r = type === 'boss' ? 30 : 15;
-                
-                let scale = 1.1;
-                let mat = MAT.enemy;
-                let hpBase = 30;
-
-                if (type === 'boss') {
-                    scale = 3.0;
-                    mat = MAT.boss;
-                    hpBase = 500; // Boss HP
-                    speedMulti *= 0.6; // Boss is slower
-                } else if (type === 'ranged') {
-                    mat = MAT.enemy; // Same color but has gun
-                    hpBase = 20; // Lower HP
-                    speedMulti *= 0.9;
-                }
-
-                this.maxHp = hpBase * hpMulti; 
-                this.hp = this.maxHp;
-                this.speed = (0.8 + Math.random() * 0.7) * speedMulti;
-                
-                // Ranged behavior
-                this.lastShot = 0;
-                this.fireRate = 1200; // 1.2秒
-                this.attackRange = 400;
-
-                this.mesh = createHumanoidGroup(mat, scale, false, type === 'ranged');
-                this.mesh.position.set(x, 11 * scale, y);
-                this.parts = { armL: this.mesh.getObjectByName("ArmL"), armR: this.mesh.getObjectByName("ArmR"), legL: this.mesh.getObjectByName("LegL"), legR: this.mesh.getObjectByName("LegR") };
-                this.indicator = null;
-                this.hitImmunity = 0; 
-            }
-            update(player, game) {
-                if (this.hitImmunity > 0) this.hitImmunity--;
-                const dx = player.x - this.x; const dy = player.y - this.y;
-                const dist = Math.sqrt(dx*dx + dy*dy);
-                
-                let move = true;
-                if (this.type === 'ranged') {
-                    // 距離が近ければ逃げる、適正なら止まる、遠ければ近づく
-                    if (dist < 200) {
-                        // 逃げる
-                        this.x -= (dx / dist) * this.speed; this.y -= (dy / dist) * this.speed;
-                    } else if (dist < this.attackRange) {
-                        move = false;
-                        // Shoot
-                        const now = Date.now();
-                        if (now - this.lastShot > this.fireRate) {
-                            this.lastShot = now;
-                            const angle = Math.atan2(player.y - this.y, player.x - this.x);
-                            const b = new Bullet(this.x, this.y, angle, true); // Enemy Bullet
-                            game.bullets.push(b);
-                            game.scene.add(b.mesh);
-                            
-                            if (this.parts.armR) {
-                                this.parts.armR.rotation.x = -Math.PI / 2;
-                                setTimeout(() => { if(this.parts.armR) this.parts.armR.rotation.x = 0; }, 200);
-                            }
-                        }
-                    } else {
-                        // 近づく
-                        this.x += (dx / dist) * this.speed; this.y += (dy / dist) * this.speed;
-                    }
-                } else {
-                    // Normal / Boss behavior
-                    if (dist > 0) {
-                        this.x += (dx / dist) * this.speed; this.y += (dy / dist) * this.speed;
-                    }
-                }
-
-                if (move) {
-                    const time = Date.now() * 0.015;
-                    if(this.parts.armL) this.parts.armL.rotation.x = Math.sin(time) * 0.5;
-                    if(this.parts.armR && this.type !== 'ranged') this.parts.armR.rotation.x = -Math.sin(time) * 0.5;
-                    if(this.parts.legL) this.parts.legL.rotation.x = -Math.sin(time) * 0.5;
-                    if(this.parts.legR) this.parts.legR.rotation.x = Math.sin(time) * 0.5;
-                }
-
-                this.mesh.position.x = this.x; this.mesh.position.z = this.y;
-                this.mesh.lookAt(player.x, this.mesh.position.y, player.y);
-            }
-            takeDamage(amt) {
-                this.hp -= amt;
-                const baseScale = this.type === 'boss' ? 3.0 : 1.1;
-                this.mesh.scale.set(baseScale * 1.2, baseScale * 1.2, baseScale * 1.2); 
-                setTimeout(() => this.mesh.scale.set(baseScale, baseScale, baseScale), 50);
-                this.mesh.traverse(child => {
-                    if (child.isMesh && child.material && child.material.isMeshStandardMaterial) {
-                        child.material.emissive.setHex(0xffaaaa);
-                        setTimeout(() => { if (child && child.material && child.material.emissive) child.material.emissive.setHex(0x000000); }, 100);
-                    }
-                });
-            }
-            recoil(fromX, fromY, force = 30) {
-                if (this.type === 'boss') return; // Boss doesn't recoil
-                const angle = Math.atan2(this.y - fromY, this.x - fromX);
-                this.x += Math.cos(angle) * force; this.y += Math.sin(angle) * force;
-                this.mesh.position.x = this.x; this.mesh.position.z = this.y;
-            }
-            updateIndicator(camera) {
-                const container = $('indicator-container');
-                const v = new THREE.Vector3(this.x, 10, this.y); v.project(camera);
-                const isOffScreen = v.x < -0.9 || v.x > 0.9 || v.y < -0.9 || v.y > 0.9;
-                if (isOffScreen || v.z > 1) {
-                    if (!this.indicator) { 
-                        this.indicator = document.createElement('div'); 
-                        this.indicator.className = 'indicator enemy-ind'; 
-                        if (this.type === 'boss') this.indicator.classList.add('boss-ind');
-                        container.appendChild(this.indicator); 
-                    }
-                    this.indicator.style.display = 'block';
-                    let angle = Math.atan2(v.y, v.x); if (v.z > 1) angle += Math.PI;
-                    const radius = Math.min(window.innerWidth, window.innerHeight) / 2 - 30;
-                    const tx = (window.innerWidth/2) + Math.cos(angle) * radius;
-                    const ty = (window.innerHeight/2) - Math.sin(angle) * radius; 
-                    this.indicator.style.left = `${tx}px`; this.indicator.style.top = `${ty}px`;
-                    const deg = -(angle * 180 / Math.PI) + 90;
-                    this.indicator.style.transform = `translate(-50%, -50%) rotate(${deg}deg)`;
-                } else { if (this.indicator) this.indicator.style.display = 'none'; }
-            }
-            removeIndicator() { if (this.indicator) { this.indicator.remove(); this.indicator = null; } }
-        }
-
-        class Effect {
-            constructor(x, y, angle) {
-                this.life = 1.0;
-                this.mesh = new THREE.Mesh(GEO.slash, MAT.slash.clone());
-                this.mesh.position.set(x, 12, y);
-                this.mesh.rotation.x = -Math.PI / 2; this.mesh.rotation.z = -angle; 
-                this.mesh.position.x += Math.cos(angle) * 20; this.mesh.position.z += Math.sin(angle) * 20;
-            }
-            update() { this.life -= 0.15; this.mesh.material.opacity = this.life; }
-        }
-
-        class Player {
-            constructor(x, y, maxHp, atk, scene) {
-                this.x = x; this.y = y; this.r = 15;
-                this.maxHp = maxHp; this.hp = maxHp; this.atk = atk;
-                this.speed = 2.5; this.lastAttack = 0; this.fireRate = 700; this.weapon = 'gun';
-                this.mesh = createHumanoidGroup(MAT.player, 1.0, true);
-                this.mesh.position.set(x, 10, y); 
-                
-                // 攻撃方向インジケーター（タッチ用）
-                this.aimIndicator = new THREE.Mesh(GEO.indicator, MAT.indicator);
-                this.aimIndicator.rotation.x = -Math.PI / 2; 
-                this.aimIndicator.position.z = 40; // プレイヤーの前方
-                this.aimIndicator.visible = false;
-                this.mesh.add(this.aimIndicator);
-
-                this.parts = { armL: this.mesh.getObjectByName("ArmL"), armR: this.mesh.getObjectByName("ArmR"), legL: this.mesh.getObjectByName("LegL"), legR: this.mesh.getObjectByName("LegR"), sword: this.mesh.getObjectByName("Sword") };
-            }
-            setWeapon(wep) { this.weapon = wep; if (this.parts.sword) this.parts.sword.visible = (wep === 'sword'); }
-            
-            // update method modified to accept vector input
-            update(moveInput, aimPos, walls, isAiming) {
-                // moveInput: {x, y} (-1 to 1)
-                let dx = moveInput.x;
-                let dy = moveInput.y;
-
-                const isMoving = (dx !== 0 || dy !== 0);
-
-                if (isMoving) {
-                    const nextX = this.x + dx * this.speed;
-                    const nextY = this.y + dy * this.speed;
-
-                    let colX = false, colY = false;
-                    const pRectX = {x: nextX-this.r, y: this.y-this.r, w: this.r*2, h: this.r*2};
-                    const pRectY = {x: this.x-this.r, y: nextY-this.r, w: this.r*2, h: this.r*2};
-                    
-                    for (let w of walls) {
-                        if (checkRectCollide(pRectX, w)) colX = true;
-                        if (checkRectCollide(pRectY, w)) colY = true;
-                    }
-                    if (!colX) this.x = nextX;
-                    if (!colY) this.y = nextY;
-
-                    const time = Date.now() * 0.015;
-                    if(this.parts.armL) this.parts.armL.rotation.x = Math.sin(time) * 0.5;
-                    if(Date.now() - this.lastAttack > this.fireRate/2) {
-                        if(this.parts.armR) this.parts.armR.rotation.x = -Math.sin(time) * 0.5;
-                    }
-                    if(this.parts.legL) this.parts.legL.rotation.x = -Math.sin(time) * 0.5;
-                    if(this.parts.legR) this.parts.legR.rotation.x = Math.sin(time) * 0.5;
-                } else {
-                    if(this.parts.armL) this.parts.armL.rotation.x = 0;
-                    if(Date.now() - this.lastAttack > this.fireRate/2) {
-                        if(this.parts.armR) this.parts.armR.rotation.x = 0;
-                    }
-                    if(this.parts.legL) this.parts.legL.rotation.x = 0;
-                    if(this.parts.legR) this.parts.legR.rotation.x = 0;
-                }
-
-                this.mesh.position.x = this.x;
-                this.mesh.position.z = this.y;
-                
-                // Look at aim position (mouse or touch aim)
-                this.mesh.lookAt(aimPos.x, 10, aimPos.y);
-
-                // インジケーター表示制御
-                this.aimIndicator.visible = isAiming;
-
-                if (this.weapon === 'sword' && Date.now() - this.lastAttack < 200) {
-                    if (this.parts.armR) {
-                        this.parts.armR.rotation.x = -Math.PI / 2;
-                        const progress = (Date.now() - this.lastAttack) / 200;
-                        this.parts.armR.rotation.y = -Math.PI / 4 + progress * Math.PI / 2; 
-                    }
-                } else if (this.weapon === 'sword') {
-                    if(this.parts.armR) {
-                        this.parts.armR.rotation.x = 0;
-                        this.parts.armR.rotation.y = 0;
-                    }
-                }
-            }
-
-            attack(aimPos) {
-                const now = Date.now();
-                if (now - this.lastAttack < this.fireRate) return;
-                this.lastAttack = now;
-
-                const angle = Math.atan2(aimPos.y - this.y, aimPos.x - this.x);
-
-                if (this.weapon === 'gun') {
-                    const b = new Bullet(this.x, this.y, angle, false); 
-                    game.bullets.push(b);
-                    game.scene.add(b.mesh);
-                } else if (this.weapon === 'sword') {
-                    const range = 100;
-                    const arc = Math.PI / 1.5; 
-                    const facingAngle = angle;
-                    
-                    const slash = new Effect(this.x, this.y, facingAngle);
-                    game.effects.push(slash);
-                    game.scene.add(slash.mesh);
-
-                    for (let i = game.enemies.length - 1; i >= 0; i--) {
-                        const e = game.enemies[i];
-                        const dist = Math.hypot(e.x - this.x, e.y - this.y);
-                        if (dist < range) {
-                            let angleToEnemy = Math.atan2(e.y - this.y, e.x - this.x);
-                            let diff = angleToEnemy - facingAngle;
-                            while (diff > Math.PI) diff -= Math.PI * 2;
-                            while (diff < -Math.PI) diff += Math.PI * 2;
-                            
-                            if (Math.abs(diff) < arc / 2) {
-                                e.takeDamage(this.atk * 1.5); 
-                                e.recoil(this.x, this.y);
-                                if (e.hp <= 0) game.killEnemy(e, i);
-                            }
-                        }
-                    }
-                }
-            }
-            takeDamage(amt) {
-                this.hp -= amt;
-                this.mesh.traverse(child => {
-                    if (child.isMesh && child.material && child.material.isMeshStandardMaterial) {
-                        child.material.emissive.setHex(0xff0000);
-                        setTimeout(() => { if (child.material && child.material.emissive) child.material.emissive.setHex(0x000000); }, 100);
-                    }
-                });
-            }
-        }
-
-        class Game {
-            constructor() {
-                this.initThree();
-                this.checkTouchInterface(); 
-                this.state = 'SAFE_ZONE';
-                this.wave = 1;
-                this.difficultyMultiplier = 1;
-                this.keys = {};
-                this.mouse = { x: 0, y: 0, down: false };
-                this.touchInput = {
-                    left: { active: false, x: 0, y: 0 }, // Movement
-                    right: { active: false, x: 0, y: 0 }  // Aim/Attack
-                };
-                
-                // Class properties for right joystick
-                this.rightCenterX = 0;
-                this.rightCenterY = 0;
-                this.rightTouchId = null;
-
-                this.raycaster = new THREE.Raycaster();
-                this.setupInput();
-
-                this.player = null;
-                this.enemies = [];
-                this.bullets = [];
-                this.skillProjectiles = [];
-                this.items = [];
-                this.effects = [];
-                this.walls = [];
-                this.interactables = [];
-                this.interactableMeshes = [];
-                
-                this.metaData = this.loadMetaData();
-                this.canUpgrade = true; 
-                this.runData = { 
-                    gold: 0, pointsGainedRun: 0, 
-                    unlockedWeapons: ['gun'], currentWeapon: 'gun',
-                    skills: [] 
-                };
-
-                this.initSafeZone();
-                this.animate();
-            }
-
-            initThree() {
-                const container = $('canvas-container');
-                this.scene = new THREE.Scene();
-                this.scene.background = new THREE.Color(0x050505);
-                this.scene.fog = new THREE.FogExp2(0x050505, 0.0015);
-                this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 5000);
-                this.camera.position.set(0, 400, 300); this.camera.lookAt(0, 0, 0);
-                this.renderer = new THREE.WebGLRenderer({ antialias: true });
-                this.renderer.setSize(window.innerWidth, window.innerHeight);
-                this.renderer.shadowMap.enabled = true; container.appendChild(this.renderer.domElement);
-                const ambientLight = new THREE.AmbientLight(0xffffff, 0.4); this.scene.add(ambientLight);
-                this.dirLight = new THREE.DirectionalLight(0xffffff, 0.7); this.dirLight.position.set(100, 200, 100);
-                this.dirLight.castShadow = true; 
-                this.dirLight.shadow.camera.top = 2000; this.dirLight.shadow.camera.bottom = -2000;
-                this.dirLight.shadow.camera.left = -2000; this.dirLight.shadow.camera.right = 2000;
-                this.dirLight.shadow.mapSize.width = 2048; this.dirLight.shadow.mapSize.height = 2048;
-                this.scene.add(this.dirLight);
-                this.playerLight = new THREE.PointLight(0xffffff, 0.5, 500); this.scene.add(this.playerLight);
-                window.addEventListener('resize', () => { 
-                    this.camera.aspect = window.innerWidth / window.innerHeight; 
-                    this.camera.updateProjectionMatrix(); 
-                    this.renderer.setSize(window.innerWidth, window.innerHeight); 
-                    this.checkTouchInterface(); 
-                    this.updateRightJoystickCenter();
-                });
-                this.planeGeometry = new THREE.PlaneGeometry(10000, 10000);
-                this.plane = new THREE.Mesh(this.planeGeometry, new THREE.MeshBasicMaterial({ visible: false }));
-                this.plane.rotation.x = -Math.PI / 2; this.scene.add(this.plane);
-            }
-
-            checkTouchInterface() {
-                const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-                const rightStick = $('joystick-right');
-                if (rightStick) {
-                    rightStick.style.display = isTouch ? 'block' : 'none';
-                    if (isTouch) {
-                        // 少し遅延させて座標を更新（レンダリング反映待ち）
-                        setTimeout(() => this.updateRightJoystickCenter(), 100);
-                    }
-                }
-            }
-
-            updateRightJoystickCenter() {
-                const joystickRight = $('joystick-right');
-                if (!joystickRight || joystickRight.style.display === 'none') return;
-                
-                const rect = joystickRight.getBoundingClientRect();
-                if (rect.width > 0 && rect.height > 0) {
-                    this.rightCenterX = rect.left + rect.width / 2;
-                    this.rightCenterY = rect.top + rect.height / 2;
-                }
-            }
-
-            setupInput() {
-                // Keyboard
-                window.addEventListener('keydown', e => {
-                    this.keys[e.code] = true;
-                    if (this.state === 'PLAYING') {
-                        const keyMap = {'KeyZ': 0, 'KeyX': 1, 'KeyC': 2, 'KeyV': 3, 'KeyB': 4};
-                        if (e.code in keyMap) this.useSkill(keyMap[e.code]);
-                    }
-                });
-                window.addEventListener('keyup', e => this.keys[e.code] = false);
-
-                // Mouse
-                window.addEventListener('mousemove', e => {
-                    const rect = this.renderer.domElement.getBoundingClientRect();
-                    const x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-                    const y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-                    this.raycaster.setFromCamera({ x, y }, this.camera);
-                    const intersects = this.raycaster.intersectObject(this.plane);
-                    if (intersects.length > 0) { this.mouse.x = intersects[0].point.x; this.mouse.y = intersects[0].point.z; }
-                });
-                window.addEventListener('mousedown', (e) => { 
-                    if (e.target.closest('button') || e.target.closest('.interactive-ui') || e.target.closest('.skill-slot')) return; 
-                    this.mouse.down = true; 
-                });
-                window.addEventListener('mouseup', () => this.mouse.down = false);
-
-                // Touch
-                const joystickLeft = $('joystick-left');
-                const knobLeft = $('knob-left');
-                const knobRight = $('knob-right');
-                
-                let leftTouchId = null;
-                let leftStartX, leftStartY;
-
-                window.addEventListener('touchstart', (e) => {
-                    if (e.target.closest('button') || e.target.closest('.interactive-ui') || e.target.closest('.skill-slot')) return;
-                    e.preventDefault();
-
-                    for (let i = 0; i < e.changedTouches.length; i++) {
-                        const t = e.changedTouches[i];
-                        const x = t.clientX;
-                        const y = t.clientY;
-
-                        // Check Left Side (Movement)
-                        if (x < window.innerWidth / 2) {
-                            if (!this.touchInput.left.active) {
-                                this.touchInput.left.active = true;
-                                leftTouchId = t.identifier;
-                                leftStartX = x; leftStartY = y;
-                                
-                                joystickLeft.style.display = 'block';
-                                joystickLeft.style.left = (x - 60) + 'px'; 
-                                joystickLeft.style.top = (y - 60) + 'px';
-                                knobLeft.style.transform = `translate(-50%, -50%)`;
-                                this.touchInput.left.x = 0;
-                                this.touchInput.left.y = 0;
-                            }
-                        } 
-                        // Check Right Side (Attack - Fixed Joystick)
-                        else {
-                            // 既に操作中でなければ開始
-                            if (!this.touchInput.right.active) {
-                                // 中心座標が未設定なら再取得を試みる
-                                if (this.rightCenterX === 0) this.updateRightJoystickCenter();
-                                
-                                const dist = Math.sqrt((x - this.rightCenterX)**2 + (y - this.rightCenterY)**2);
-                                // 判定エリアを広めに取る (150px)
-                                if (dist < 150) {
-                                    this.touchInput.right.active = true;
-                                    this.rightTouchId = t.identifier;
-                                    this.handleRightJoystickMove(x, y, knobRight);
-                                }
-                            }
-                        }
-                    }
-                }, {passive: false});
-
-                window.addEventListener('touchmove', (e) => {
-                    e.preventDefault();
-                    for (let i = 0; i < e.changedTouches.length; i++) {
-                        const t = e.changedTouches[i];
-                        
-                        if (t.identifier === leftTouchId) {
-                            // Update Left Joystick
-                            const maxDist = 40;
-                            let dx = t.clientX - leftStartX;
-                            let dy = t.clientY - leftStartY;
-                            const dist = Math.sqrt(dx*dx + dy*dy);
-                            if (dist > maxDist) {
-                                dx = (dx / dist) * maxDist;
-                                dy = (dy / dist) * maxDist;
-                            }
-                            knobLeft.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
-                            this.touchInput.left.x = dx / maxDist;
-                            this.touchInput.left.y = dy / maxDist;
-                        } 
-                        else if (t.identifier === this.rightTouchId) {
-                            // Update Right Joystick
-                            this.handleRightJoystickMove(t.clientX, t.clientY, knobRight);
-                        }
-                    }
-                }, {passive: false});
-
-                window.addEventListener('touchend', (e) => {
-                    e.preventDefault();
-                    for (let i = 0; i < e.changedTouches.length; i++) {
-                        const t = e.changedTouches[i];
-                        
-                        if (t.identifier === leftTouchId) {
-                            this.touchInput.left.active = false;
-                            this.touchInput.left.x = 0; 
-                            this.touchInput.left.y = 0;
-                            joystickLeft.style.display = 'none';
-                            leftTouchId = null;
-                        } 
-                        else if (t.identifier === this.rightTouchId) {
-                            // Attack on Release!
-                            if (this.state === 'PLAYING' && this.player) {
-                                // 入力がある程度ある場合のみ発射
-                                if (Math.abs(this.touchInput.right.x) > 0.1 || Math.abs(this.touchInput.right.y) > 0.1) {
-                                    // プレイヤーからの相対位置を計算して攻撃
-                                    const aimPos = { 
-                                        x: this.player.x + this.touchInput.right.x * 200, 
-                                        y: this.player.y + this.touchInput.right.y * 200 
-                                    };
-                                    // 強制発射ロジックが必要だが、とりあえず通常の攻撃を呼ぶ
-                                    // クールダウン無視はバランス崩壊するので、通常のfireRateに従う
-                                    // ただし「離したのに出ない」を防ぐため、lastAttackをリセットする手もあるが
-                                    // ここではシンプルに呼ぶ
-                                    this.player.attack(aimPos); 
-                                }
-                            }
-
-                            this.touchInput.right.active = false;
-                            this.touchInput.right.x = 0;
-                            this.touchInput.right.y = 0;
-                            knobRight.style.transform = `translate(-50%, -50%)`;
-                            this.rightTouchId = null;
-                        }
-                    }
-                });
-            }
-
-            handleRightJoystickMove(x, y, knobElement) {
-                if (this.rightCenterX === 0) return; // 念のため
-
-                const maxDist = 40;
-                let dx = x - this.rightCenterX;
-                let dy = y - this.rightCenterY;
-                const dist = Math.sqrt(dx*dx + dy*dy);
-                
-                // Visual limit
-                let visualDx = dx, visualDy = dy;
-                if (dist > maxDist) {
-                    const ratio = maxDist / dist;
-                    visualDx = dx * ratio;
-                    visualDy = dy * ratio;
-                }
-                knobElement.style.transform = `translate(calc(-50% + ${visualDx}px), calc(-50% + ${visualDy}px))`;
-                
-                // Logic (Normalized Vector)
-                if (dist > 5) {
-                     this.touchInput.right.x = dx / dist;
-                     this.touchInput.right.y = dy / dist;
-                } else {
-                     this.touchInput.right.x = 0;
-                     this.touchInput.right.y = 0;
-                }
-            }
-
-            // ... loadMetaData, saveMetaData, hasSaveData, loadSaveGame, saveRunData ...
-            loadMetaData() { 
-                const data = localStorage.getItem(STORAGE_KEY_META); 
-                const def = { points: 0, maxHpLevel: 0, atkLevel: 0, skillSlotLevel: 0, totemCount: 0 }; 
-                return data ? { ...def, ...JSON.parse(data) } : def; 
-            }
-            saveMetaData() { localStorage.setItem(STORAGE_KEY_META, JSON.stringify(this.metaData)); }
-            hasSaveData() { return localStorage.getItem(STORAGE_KEY_SAVE) !== null; }
-            loadSaveGame() {
-                const save = JSON.parse(localStorage.getItem(STORAGE_KEY_SAVE));
-                if (!save) return;
-                this.wave = save.wave;
-                this.runData.gold = save.gold;
-                this.runData.pointsGainedRun = save.pointsGainedRun;
-                this.runData.unlockedWeapons = save.unlockedWeapons || ['gun'];
-                this.runData.currentWeapon = save.currentWeapon || 'gun';
-                this.runData.skills = save.skills || [];
-                this.difficultyMultiplier = 1 + (this.wave * 0.1);
-                this.tempLoadStats = save.player;
-                this.startBattlePhase(true);
-            }
-
-            saveRunData() {
-                const saveData = {
-                    wave: this.wave, gold: this.runData.gold, pointsGainedRun: this.runData.pointsGainedRun,
-                    unlockedWeapons: this.runData.unlockedWeapons, currentWeapon: this.runData.currentWeapon,
-                    player: { maxHp: this.player.maxHp, hp: this.player.hp, atk: this.player.atk, speed: this.player.speed, fireRate: this.player.fireRate },
-                    skills: this.runData.skills
-                };
-                localStorage.setItem(STORAGE_KEY_SAVE, JSON.stringify(saveData));
-            }
-
-            // ... clearEntities, initSafeZone ...
-            clearEntities() {
-                if (this.player && this.player.mesh) this.scene.remove(this.player.mesh);
-                this.enemies.forEach(e => { this.scene.remove(e.mesh); e.removeIndicator(); });
-                this.bullets.forEach(b => this.scene.remove(b.mesh));
-                this.skillProjectiles.forEach(p => this.scene.remove(p.mesh));
-                this.items.forEach(i => { this.scene.remove(i.mesh); i.removeIndicator(); });
-                this.effects.forEach(e => this.scene.remove(e.mesh));
-                this.interactableMeshes.forEach(m => this.scene.remove(m));
-                if (this.currentFloorMesh) this.scene.remove(this.currentFloorMesh);
-                this.enemies = []; this.bullets = []; this.skillProjectiles = []; this.items = []; this.effects = []; this.interactables = []; this.interactableMeshes = []; this.walls = [];
-                $('indicator-container').innerHTML = '';
-            }
-
-            initSafeZone() {
-                this.state = 'SAFE_ZONE'; this.clearEntities();
-                const roomW = 400, roomH = 300;
-                const floorGeo = new THREE.BoxGeometry(roomW, 10, roomH);
-                this.currentFloorMesh = new THREE.Mesh(floorGeo, MAT.floorSafe);
-                this.currentFloorMesh.position.set(0, -5, 0); this.currentFloorMesh.receiveShadow = true; this.scene.add(this.currentFloorMesh);
-
-                const baseMaxHp = 100 + (this.metaData.maxHpLevel * 10);
-                const baseAtk = 10 + (this.metaData.atkLevel * 2);
-                this.player = new Player(0, 0, baseMaxHp, baseAtk);
-                // Reset to saved weapon or default if not in run
-                // Here we keep currentWeapon if just returned, or load from meta if needed (meta doesn't store currentWeapon yet, so let's keep runData for session)
-                this.player.setWeapon(this.runData.currentWeapon);
-                this.scene.add(this.player.mesh);
-
-                this.walls.push({x: -2000, y: -2000, w: 4000, h: 2000 - roomH/2});
-                this.walls.push({x: -2000, y: roomH/2, w: 4000, h: 2000});
-                this.walls.push({x: -2000, y: -roomH/2, w: 2000 - roomW/2, h: roomH});
-                this.walls.push({x: roomW/2, y: -roomH/2, w: 2000, h: roomH});
-                const wallThick = 10, wallH = 40;
-                const createWall = (x, z, w, d) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, wallH, d), MAT.wall); m.position.set(x, wallH/2, z); m.castShadow = true; this.scene.add(m); this.interactableMeshes.push(m); };
-                createWall(0, -roomH/2 - wallThick/2, roomW + wallThick*2, wallThick); createWall(0, roomH/2 + wallThick/2, roomW + wallThick*2, wallThick);
-                createWall(-roomW/2 - wallThick/2, 0, wallThick, roomH); createWall(roomW/2 + wallThick/2, 0, wallThick, roomH);
-
-                this.interactables.push({ type: 'npc', x: -100, y: -60, r: 20, action: () => this.openNpcMenu() });
-                const npcMesh = createHumanoidGroup(MAT.npc, 1.2); npcMesh.position.set(-100, 12, -60); npcMesh.lookAt(0, 12, 0); this.scene.add(npcMesh); this.interactableMeshes.push(npcMesh);
-                const carpet = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.MeshStandardMaterial({color: 0x7f1d1d})); carpet.rotation.x = -Math.PI/2; carpet.position.set(-100, 0.2, -60); this.scene.add(carpet); this.interactableMeshes.push(carpet);
-
-                this.interactables.push({ type: 'smith', x: -100, y: 60, r: 20, action: () => this.openWeaponMenu() });
-                const smithMesh = createHumanoidGroup(MAT.smith, 1.2); smithMesh.position.set(-100, 12, 60); smithMesh.lookAt(0, 12, 0); this.scene.add(smithMesh); this.interactableMeshes.push(smithMesh);
-                const carpetSmith = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.MeshStandardMaterial({color: 0xD97706})); carpetSmith.rotation.x = -Math.PI/2; carpetSmith.position.set(-100, 0.2, 60); this.scene.add(carpetSmith); this.interactableMeshes.push(carpetSmith);
-
-                // Save Point (Monolith)
-                this.interactables.push({ type: 'save', x: 100, y: 0, r: 25, action: () => this.manualSave() });
-                const saveMesh = new THREE.Mesh(GEO.savePoint, MAT.savePoint);
-                saveMesh.position.set(100, 20, 0);
-                this.scene.add(saveMesh); this.interactableMeshes.push(saveMesh);
-
-                this.interactables.push({ type: 'door', x: -25, y: -140, w: 50, h: 20, action: () => this.startNewGame() });
-                const doorMesh = createDoorGroup(MAT.doorStart); doorMesh.position.set(0, 0, -148); this.scene.add(doorMesh); this.interactableMeshes.push(doorMesh);
-                
-                if (this.hasSaveData()) {
-                    this.interactables.push({ type: 'door', x: 100, y: -140, w: 50, h: 20, action: () => this.loadSaveGame() });
-                    const loadMesh = createDoorGroup(MAT.doorLoad); loadMesh.position.set(125, 0, -148); this.scene.add(loadMesh); this.interactableMeshes.push(loadMesh);
-                }
-
-                $('hud').classList.add('hidden'); $('waveMenu').classList.add('hidden'); $('npcMenu').classList.add('hidden'); $('weaponSmithMenu').classList.add('hidden'); $('gameOverMenu').classList.add('hidden'); $('reviveMenu').classList.add('hidden'); $('skillBar').classList.add('hidden');
-                this.updateSkillHud(); // Reset UI
-            }
-
-            // ... startNewGame, startBattlePhase, spawnWave, animate ...
-            startNewGame() {
-                localStorage.removeItem(STORAGE_KEY_SAVE);
-                this.wave = 1; this.difficultyMultiplier = 1;
-                this.runData = { gold: 0, pointsGainedRun: 0, unlockedWeapons: ['gun'], currentWeapon: 'gun', skills: [] };
-                this.tempLoadStats = null;
-                this.canUpgrade = true; // 厳密には不要かもしれないが念のため
-                this.startBattlePhase();
-            }
-
-            startBattlePhase(isLoad = false) {
-                this.state = 'PLAYING'; this.clearEntities();
-                const fieldSize = 1500;
-                this.currentFloorMesh = new THREE.Mesh(new THREE.PlaneGeometry(fieldSize, fieldSize), MAT.floorBattle);
-                this.currentFloorMesh.rotation.x = -Math.PI / 2; this.currentFloorMesh.receiveShadow = true; this.scene.add(this.currentFloorMesh);
-
-                const w = 100; const limit = 750;
-                this.walls.push({x: -limit - w, y: -limit - w, w: limit*2 + w*2, h: w});
-                this.walls.push({x: -2000, y: -2000, w: 4000, h: 2000 - limit});
-                this.walls.push({x: -2000, y: limit, w: 4000, h: 2000});
-                this.walls.push({x: -2000, y: -limit, w: 2000 - limit, h: limit*2});
-                this.walls.push({x: limit, y: -limit, w: 2000, h: limit*2});
-
-                const baseMaxHp = 100 + (this.metaData.maxHpLevel * 10);
-                const baseAtk = 10 + (this.metaData.atkLevel * 2);
-                this.player = new Player(0, 0, baseMaxHp, baseAtk);
-                if (this.tempLoadStats) {
-                    this.player.hp = this.tempLoadStats.hp; this.player.atk = this.tempLoadStats.atk;
-                    this.player.maxHp = this.tempLoadStats.maxHp; this.player.speed = this.tempLoadStats.speed;
-                    if(this.tempLoadStats.fireRate) this.player.fireRate = this.tempLoadStats.fireRate;
-                    this.tempLoadStats = null;
-                }
-                this.player.setWeapon(this.runData.currentWeapon);
-                this.scene.add(this.player.mesh);
-                $('hud').classList.remove('hidden'); $('skillBar').classList.remove('hidden');
-                this.updateHud(); this.updateSkillHud();
-                if (!isLoad) this.spawnWave(); else setTimeout(() => this.spawnWave(), 1000);
-            }
-
-            spawnWave() {
-                const isBossWave = this.wave % 10 === 0;
-                const hpMulti = 1 + (this.wave * 0.1);
-                const speedMulti = 1 + (this.wave * 0.05);
-
-                let enemyCount = 5 + Math.floor(this.wave * 1.5);
-                if (isBossWave) enemyCount = 3; // Reduce trash mobs for boss wave
-
-                // Spawn Normal / Ranged
-                for (let i = 0; i < enemyCount; i++) {
-                    const angle = Math.random() * Math.PI * 2; const dist = 400 + Math.random() * 200;
-                    const ex = this.player.x + Math.cos(angle) * dist; const ey = this.player.y + Math.sin(angle) * dist;
-                    
-                    let type = 'normal';
-                    // Wave 11+ spawn ranged
-                    if (this.wave >= 11 && Math.random() < 0.3) type = 'ranged';
-                    
-                    const enemy = new Enemy(ex, ey, hpMulti, speedMulti, type);
-                    this.enemies.push(enemy); this.scene.add(enemy.mesh);
-                }
-
-                // Spawn Boss
-                if (isBossWave) {
-                    const angle = Math.random() * Math.PI * 2; 
-                    const dist = 600;
-                    const ex = this.player.x + Math.cos(angle) * dist; 
-                    const ey = this.player.y + Math.sin(angle) * dist;
-                    const boss = new Enemy(ex, ey, hpMulti, speedMulti, 'boss');
-                    this.enemies.push(boss); this.scene.add(boss.mesh);
-                    this.showNotification(`BOSS WAVE ${this.wave}!`);
-                } else {
-                    this.showNotification(`WAVE ${this.wave} START!`);
-                }
-                
-                this.updateHud();
-            }
-
-            animate() { requestAnimationFrame(() => this.animate()); this.update(); this.render(); }
-
-            update() {
-                if (this.state !== 'PLAYING' && this.state !== 'SAFE_ZONE') return;
-                const now = Date.now();
-
-                // Skill Cooldown UI
-                if (this.state === 'PLAYING') {
-                     this.runData.skills.forEach((skill, idx) => {
-                         const def = SKILL_DEFS[skill.id];
-                         const elapsed = now - (skill.lastUse || 0);
-                         const remaining = Math.max(0, def.cd - elapsed);
-                         const el = $(`skill-cd-${idx}`);
-                         if(el) el.style.height = (remaining / def.cd * 100) + '%';
-                     });
-                }
-
-                // Input Handling: Combine Keyboard and Touch
-                let moveX = 0;
-                let moveY = 0;
-                let aimPos = { x: this.mouse.x, y: this.mouse.y };
-                let isAttacking = this.mouse.down;
-                let isAiming = false;
-
-                // Keyboard Logic
-                if (this.keys['KeyW'] || this.keys['ArrowUp']) moveY = -1;
-                if (this.keys['KeyS'] || this.keys['ArrowDown']) moveY = 1;
-                if (this.keys['KeyA'] || this.keys['ArrowLeft']) moveX = -1;
-                if (this.keys['KeyD'] || this.keys['ArrowRight']) moveX = 1;
-
-                // Touch Logic Overwrite
-                if (this.touchInput.left.active) {
-                    moveX = this.touchInput.left.x;
-                    moveY = this.touchInput.left.y;
-                }
-                
-                // Right Joystick Aim (Active state)
-                if (this.touchInput.right.active && (this.touchInput.right.x !== 0 || this.touchInput.right.y !== 0)) {
-                    isAiming = true;
-                    // Update aim while holding
-                    aimPos = { 
-                        x: this.player.x + this.touchInput.right.x * 100, 
-                        y: this.player.y + this.touchInput.right.y * 100 
-                    };
-                }
-
-                // Normalize keyboard if used alone
-                if (!this.touchInput.left.active && (moveX !== 0 || moveY !== 0)) {
-                    const len = Math.sqrt(moveX*moveX + moveY*moveY);
-                    moveX /= len; moveY /= len;
-                }
-
-                if (this.player) {
-                    this.player.update({x: moveX, y: moveY}, aimPos, this.walls, isAiming);
-                    const targetX = this.player.x; const targetZ = this.player.y + 300; 
-                    this.camera.position.x += (targetX - this.camera.position.x) * 0.1;
-                    this.camera.position.z += (targetZ - this.camera.position.z) * 0.1;
-                    this.playerLight.position.set(this.player.x, 50, this.player.y);
-
-                    if (this.state === 'PLAYING' && isAttacking) {
-                        this.player.attack(aimPos);
-                    }
-                }
-
-                // Bullets
-                for (let i = this.bullets.length - 1; i >= 0; i--) {
-                    const b = this.bullets[i]; b.update();
-                    if (Math.abs(b.x - this.player.x) > 1200 || Math.abs(b.y - this.player.y) > 1200) { this.scene.remove(b.mesh); this.bullets.splice(i, 1); continue; }
-                    
-                    if (this.state === 'PLAYING') {
-                        if (b.isEnemy) {
-                            if (checkCircleCollide(b, this.player)) {
-                                this.player.takeDamage(15 * this.difficultyMultiplier); 
-                                this.scene.remove(b.mesh); this.bullets.splice(i, 1);
-                                this.updateHud();
-                                if (this.player.hp <= 0) this.handleGameOver();
-                                continue;
-                            }
-                        } else {
-                            for (let j = this.enemies.length - 1; j >= 0; j--) {
-                                const e = this.enemies[j];
-                                if (checkCircleCollide(b, e)) {
-                                    e.takeDamage(this.player.atk); this.scene.remove(b.mesh); this.bullets.splice(i, 1);
-                                    if (e.hp <= 0) this.killEnemy(e, j); break;
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Skill Projectiles
-                for (let i = this.skillProjectiles.length - 1; i >= 0; i--) {
-                    const p = this.skillProjectiles[i];
-                    p.update();
-                    
-                    if (this.state === 'PLAYING') {
-                        // ガード
-                        if (!p.type || !SKILL_DEFS[p.type]) continue;
-
-                        const def = SKILL_DEFS[p.type];
-                        const dmg = def.baseDmg + (p.skillRef.damageLvl * def.dmgStep);
-
-                        for (let j = this.enemies.length - 1; j >= 0; j--) {
-                            const e = this.enemies[j];
-                            if (e.hitImmunity > 0) continue; 
-
-                            let hit = false;
-                            if (p.type === 'orb') hit = checkCircleCollide({x:p.x, y:p.y, r:p.r}, e);
-                            else if (p.type === 'slash') hit = checkCircleCollide({x:p.x, y:p.y, r:p.r}, e);
-                            else if (p.type === 'wave') {
-                                const dist = Math.hypot(e.x - p.x, e.y - p.y);
-                                hit = dist < p.r && dist > p.r - 20; 
-                            }
-
-                            if (hit) {
-                                e.takeDamage(dmg);
-                                if (p.type === 'wave') e.recoil(p.x, p.y, def.knockback);
-                                e.hitImmunity = 10; 
-                                if (e.hp <= 0) this.killEnemy(e, j);
-                            }
-                        }
-                    }
-
-                    if (p.dead) {
-                        this.scene.remove(p.mesh);
-                        this.skillProjectiles.splice(i, 1);
-                    }
-                }
-
-                // Enemies
-                if (this.state === 'PLAYING') {
-                    for (let i = 0; i < this.enemies.length; i++) {
-                        const e = this.enemies[i];
-                        e.update(this.player, this); e.updateIndicator(this.camera);
-                        if (checkCircleCollide(e, this.player)) {
-                            this.player.takeDamage(10 * this.difficultyMultiplier); e.recoil(this.player.x, this.player.y); this.updateHud();
-                            if (this.player.hp <= 0) this.handleGameOver();
-                        }
-                    }
-                }
-
-                // Items
-                for (let i = this.items.length - 1; i >= 0; i--) {
-                    const item = this.items[i]; item.update(); item.updateIndicator(this.camera);
-                    const dist = Math.hypot(this.player.x - item.x, this.player.y - item.y);
-                    if (dist < 150) { item.x += (this.player.x - item.x) * 0.1; item.y += (this.player.y - item.y) * 0.1; }
-                    if (dist < 30) {
-                        if (item.type === 'gold') { this.runData.gold += item.value; this.showNotification(`+${item.value} G`); } 
-                        else { this.runData.pointsGainedRun += item.value; }
-                        this.scene.remove(item.mesh); item.removeIndicator(); this.items.splice(i, 1); this.updateHud();
-                    }
-                }
-
-                // Effects
-                for (let i = this.effects.length - 1; i >= 0; i--) {
-                    const eff = this.effects[i]; eff.update();
-                    if (eff.life <= 0) { this.scene.remove(eff.mesh); this.effects.splice(i, 1); }
-                }
-
-                // Interactables
-                if (this.state === 'SAFE_ZONE') {
-                    for (let obj of this.interactables) {
-                        if (!obj) continue; // ガード
-                        if (obj.type === 'door') { if (checkRectCollide({x:this.player.x-15, y:this.player.y-15, w:30, h:30}, obj)) obj.action(); }
-                        else { 
-                            const dist = Math.hypot(this.player.x - obj.x, this.player.y - obj.y); 
-                            if (dist < (obj.r + 15)) obj.action(); 
-                        }
-                    }
-                    // Rotate save point (より安全な検索)
-                    const saveMesh = this.interactableMeshes.find(m => {
-                        return m && m.geometry && m.geometry.type === 'OctahedronGeometry';
-                    });
-                    if(saveMesh) {
-                        saveMesh.rotation.y += 0.02;
-                        saveMesh.rotation.z += 0.01;
-                    }
-                }
-            }
-
-            render() { this.renderer.render(this.scene, this.camera); }
-
-            killEnemy(enemy, index) {
-                this.scene.remove(enemy.mesh); enemy.removeIndicator(); this.enemies.splice(index, 1);
-                
-                // Drop more for boss
-                let drops = 1;
-                if(enemy.type === 'boss') drops = 10;
-                
-                for(let k=0; k<drops; k++) {
-                    const gx = enemy.x + (Math.random()-0.5)*20; 
-                    const gy = enemy.y + (Math.random()-0.5)*20;
-                    const val = enemy.type === 'boss' ? 100 : Math.floor(random(10, 30));
-                    const gold = new Item(gx, gy, 'gold', val); 
-                    this.items.push(gold); this.scene.add(gold.mesh);
-                }
-
-                const pts = enemy.type === 'boss' ? 500 : Math.floor(random(5, 15)); 
-                this.runData.pointsGainedRun += pts; this.updateHud(); 
-                
-                if (this.enemies.length === 0) { setTimeout(() => { this.openWaveMenu(); }, 1000); }
-            }
-
-            // --- Skills Logic ---
-            useSkill(slotIndex) {
-                const skill = this.runData.skills[slotIndex];
-                if (!skill) return;
-                const def = SKILL_DEFS[skill.id];
-                const now = Date.now();
-                if (now - (skill.lastUse || 0) < def.cd) {
-                    return; // Cooldown
-                }
-                
-                skill.lastUse = now;
-                this.showNotification(`${def.name} 発動!`);
-
-                // Spawn Projectiles
-                if (skill.id === 'orb') {
-                    for (let i = 0; i < skill.count; i++) {
-                        const p = new SkillProjectile('orb', this.player.x, this.player.y, {index: i, total: skill.count}, this.player, skill);
-                        this.skillProjectiles.push(p); this.scene.add(p.mesh);
-                    }
-                } else if (skill.id === 'slash') {
-                    for (let i = 0; i < skill.count; i++) {
-                        const p = new SkillProjectile('slash', this.player.x, this.player.y, {index: i}, this.player, skill);
-                        this.skillProjectiles.push(p); this.scene.add(p.mesh);
-                    }
-                } else if (skill.id === 'wave') {
-                    for (let i = 0; i < skill.count; i++) {
-                        setTimeout(() => {
-                            const p = new SkillProjectile('wave', this.player.x, this.player.y, {}, this.player, skill);
-                            this.skillProjectiles.push(p); this.scene.add(p.mesh);
-                        }, i * 200);
-                    }
-                }
-            }
-
-            updateSkillHud() {
-                const bar = $('skillBar');
-                bar.innerHTML = '';
-                
-                // Max slots based on meta upgrade (Base 3 + upgrades)
-                // Default 3 slots, can upgrade to 5
-                const maxSlots = 3 + (this.metaData.skillSlotLevel || 0);
-                
-                for(let i=0; i<maxSlots; i++) {
-                    const skill = this.runData.skills[i];
-                    const div = document.createElement('div');
-                    div.className = 'skill-slot';
-                    div.innerHTML = `<span class="skill-key">${SKILL_KEYS[i]}</span>`;
-                    
-                    // Touch Event for Skill Activation
-                    div.onclick = (e) => {
-                        e.stopPropagation();
-                        this.useSkill(i);
-                    };
-                    
-                    if (skill) {
-                        const def = SKILL_DEFS[skill.id];
-                        const icon = document.createElement('span');
-                        icon.innerText = def.name.charAt(0);
-                        div.appendChild(icon);
-                        
-                        const overlay = document.createElement('div');
-                        overlay.id = `skill-cd-${i}`;
-                        overlay.className = 'skill-cd-overlay';
-                        div.appendChild(overlay);
-                        
-                        if(skill.id === 'orb') div.style.borderColor = '#00FFFF';
-                        if(skill.id === 'slash') div.style.borderColor = '#AAFFAA';
-                        if(skill.id === 'wave') div.style.borderColor = '#FF00FF';
-
-                        // Touch/Click Event for Skill Activation
-                        const triggerSkill = (e) => {
-                            // Only trigger if skill exists
-                            e.preventDefault(); 
-                            e.stopPropagation();
-                            this.useSkill(i);
-                            
-                            // Visual feedback
-                            div.style.transform = 'scale(0.9)';
-                            setTimeout(() => div.style.transform = 'scale(1)', 100);
-                        };
-
-                        div.addEventListener('touchstart', triggerSkill, { passive: false });
-                        div.addEventListener('mousedown', triggerSkill);
-
-                    } else {
-                        div.style.opacity = 0.3;
-                    }
-                    bar.appendChild(div);
-                }
-            }
-
-            // --- Menu Logic ---
-
-            openWaveMenu() {
-                $('waveMenu').classList.remove('hidden');
-                $('menuWaveNum').innerText = this.wave;
-                
-                // Show choice container, hide post-wave controls
-                $('choiceContainer').classList.remove('hidden');
-                $('choiceContainer').style.display = 'flex';
-                $('postWaveControls').classList.add('hidden');
-                $('postWaveControls').style.display = 'none';
-                $('waveMenuSubtitle').innerText = "報酬を選択してください";
-                
-                const container = $('choiceContainer');
-                container.innerHTML = '';
-
-                // Generate 3 choices
-                const choices = this.generateChoices();
-                
-                choices.forEach(choice => {
-                    const card = document.createElement('div');
-                    // cursor-pointerを追加し、ホバー時の背景色変化などをTailwindクラスで強化
-                    card.className = "choice-card bg-gray-800 border-2 border-gray-600 p-6 rounded-lg w-64 text-center flex flex-col items-center justify-between cursor-pointer hover:bg-gray-700 hover:border-yellow-400 transition-all duration-200 transform hover:scale-105 active:scale-95 shadow-lg";
-                    
-                    let html = `<h3 class="text-xl font-bold mb-3 ${choice.color} pointer-events-none">${choice.title}</h3>`;
-                    html += `<p class="text-gray-300 text-sm mb-4 h-16 pointer-events-none flex items-center justify-center">${choice.desc}</p>`;
-                    
-                    // Show stats
-                    if (choice.type !== 'heal' && choice.type !== 'gold') {
-                        html += `<div class="text-xs text-gray-400 mb-2 pointer-events-none">現在のレベル: ${choice.currentLvl || 0}</div>`;
-                    }
-                    
-                    // タップを促す小さなテキスト（ボタンではない）
-                    html += `<div class="text-xs text-yellow-500 mt-2 font-bold pointer-events-none">TAP TO SELECT</div>`;
-                    
-                    card.innerHTML = html;
-                    
-                    // カード全体にクリックイベントを設定
-                    card.onclick = () => {
-                        choice.action();
-                        // Instead of nextWave, show intermission only on wave 10, 20...
-                        if (this.wave % 10 === 0) {
-                            this.showWaveIntermission();
-                        } else {
-                            this.nextWave();
-                        }
-                    };
-
-                    container.appendChild(card);
-                });
-            }
-
-            showWaveIntermission() {
-                $('choiceContainer').style.display = 'none';
-                $('postWaveControls').style.display = 'flex';
-                $('postWaveControls').classList.remove('hidden');
-                $('waveMenuSubtitle').innerText = "行動を選択してください";
-            }
-
-            generateChoices() {
-                const options = [];
-                const ownedIds = this.runData.skills.map(s => s.id);
-                const maxSlots = 3 + (this.metaData.skillSlotLevel || 0);
-                
-                // 1. New Skills (if slots available)
-                if (this.runData.skills.length < maxSlots) {
-                    for (let key in SKILL_DEFS) {
-                        if (!ownedIds.includes(key)) {
-                            options.push({
-                                type: 'new_skill',
-                                id: key,
-                                title: `習得: ${SKILL_DEFS[key].name}`,
-                                desc: SKILL_DEFS[key].desc,
-                                color: 'text-yellow-400',
-                                action: () => {
-                                    this.runData.skills.push({
-                                        id: key, count: 1, damageLvl: 0, lastUse: 0
-                                    });
-                                    this.updateSkillHud();
-                                }
-                            });
-                        }
-                    }
-                }
-
-                // 2. Upgrades for owned skills
-                this.runData.skills.forEach(skill => {
-                    const def = SKILL_DEFS[skill.id];
-                    // Upgrade Count
-                    if (skill.count < def.maxCount) {
-                        options.push({
-                            type: 'upgrade_count',
-                            title: `${def.name}: 数増加`,
-                            desc: `発射数を +1 します (現在: ${skill.count})`,
-                            color: 'text-green-400',
-                            currentLvl: skill.count,
-                            action: () => skill.count++
-                        });
-                    }
-                    // Upgrade Damage
-                    options.push({
-                        type: 'upgrade_dmg',
-                        title: `${def.name}: 威力強化`,
-                        desc: `攻撃力を +${def.dmgStep} します`,
-                        color: 'text-red-400',
-                        currentLvl: skill.damageLvl,
-                        action: () => skill.damageLvl++
-                    });
-                });
-
-                // 3. Fallback/Generic Options (Heal, Gold)
-                const genericOptions = [
-                    {
-                        type: 'heal', title: 'HP全回復', desc: 'HPを100%回復します', color: 'text-green-500',
-                        action: () => { this.player.hp = this.player.maxHp; this.updateHud(); }
-                    },
-                    {
-                        type: 'stat_atk', title: '攻撃力アップ', desc: '基本攻撃力を +2 します', color: 'text-red-500',
-                        action: () => { this.player.atk += 2; this.updateHud(); }
-                    }
-                ];
-
-                // Shuffle & Pick 3
-                const pool = [...options, ...genericOptions];
-                // Fisher-Yates shuffle
-                for (let i = pool.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [pool[i], pool[j]] = [pool[j], pool[i]];
-                }
-                
-                return pool.slice(0, 3);
-            }
-
-            nextWave() { $('waveMenu').classList.add('hidden'); this.wave++; this.state = 'PLAYING'; this.spawnWave(); }
-
-            handleGameOver() {
-                if (this.state === 'REVIVE_CONFIRM') return;
-
-                // Check Totem
-                if ((this.metaData.totemCount || 0) > 0) {
-                    this.state = 'REVIVE_CONFIRM';
-                    $('reviveTotemCount').innerText = this.metaData.totemCount;
-                    $('reviveMenu').classList.remove('hidden');
-                } else {
-                    this.confirmGameOver();
-                }
-            }
-
-            useTotem() {
-                if (this.metaData.totemCount > 0) {
-                    this.metaData.totemCount--;
-                    this.saveMetaData();
-                    this.updateNpcMenu();
-                    
-                    // Revive Logic
-                    $('reviveMenu').classList.add('hidden');
-                    this.state = 'PLAYING';
-                    this.player.hp = this.player.maxHp;
-                    this.updateHud();
-                    this.showNotification("不死のトーテムを使用しました！");
-                    
-                    // Push enemies back slightly
-                    this.enemies.forEach(e => e.recoil(this.player.x, this.player.y, 200));
-                } else {
-                    this.confirmGameOver();
-                }
-            }
-
-            confirmGameOver() {
-                this.state = 'GAME_OVER'; 
-                $('reviveMenu').classList.add('hidden');
-                localStorage.removeItem(STORAGE_KEY_SAVE);
-                this.metaData.points += this.runData.pointsGainedRun; this.saveMetaData();
-                
-                // コイン没収 & 強化可能に
-                this.runData.gold = 0; 
-                this.canUpgrade = true; 
-
-                $('goPoints').innerText = this.runData.pointsGainedRun; $('gameOverMenu').classList.remove('hidden');
-                setTimeout(() => this.initSafeZone(), 3000);
-            }
-
-            saveAndQuit() {
-                this.returnToSafeZone(); // Deprecated logic, now just return
-            }
-
-            returnToSafeZone() {
-                // Add points gained in this run to meta points
-                this.metaData.points += this.runData.pointsGainedRun;
-                this.runData.pointsGainedRun = 0;
-                this.saveMetaData();
-
-                // SAVE RUN DATA! This allows loading from purple door
-                // Increment wave so we start at next one
-                this.wave++; 
-                this.saveRunData(); 
-                
-                this.canUpgrade = false; // 生存帰還時は強化不可
-
-                $('waveMenu').classList.add('hidden');
-                this.showNotification(`帰還しました。進行状況を保存。`);
-                this.initSafeZone();
-            }
-
-            manualSave() {
-                this.saveMetaData();
-                this.showNotification("記録しました (セーブ完了)");
-            }
-
-            updateHud() {
-                $('waveDisplay').innerText = this.wave;
-                $('hpDisplay').innerText = `${Math.ceil(this.player.hp)}/${this.player.maxHp}`;
-                $('goldDisplay').innerText = this.runData.gold;
-                $('pointDisplay').innerText = this.runData.pointsGainedRun;
-                $('weaponDisplay').innerText = this.runData.currentWeapon.toUpperCase();
-                $('hpDisplay').style.color = (this.player.hp / this.player.maxHp) < 0.3 ? '#ef4444' : 'white';
-            }
-
-            showNotification(msg) {
-                const el = $('notification'); el.innerText = msg; el.style.opacity = 1; el.style.transform = 'translate(-50%, 0)';
-                setTimeout(() => { el.style.opacity = 0; el.style.transform = 'translate(-50%, 10px)'; }, 2000);
-            }
-
-            shopBuy(type) { /* Legacy Shop unused in wave menu, but kept for logic if needed later */ }
-
-            switchWeapon(wep) {
-                this.runData.currentWeapon = wep; 
-                this.player.setWeapon(wep); 
-                this.updateHud();
-                if(this.state === 'MENU') this.openWeaponMenu();
-                
-                // 装備変更を即時保存（セーフゾーンでの変更を紫ドアに反映させるため）
-                if (this.state === 'SAFE_ZONE' || this.state === 'MENU') {
-                    this.saveRunData();
-                }
-            }
-
-            openNpcMenu() { 
-                // ガード処理追加
-                if (!this.canUpgrade) {
-                    this.showNotification("まだ死んでいないため利用できません");
-                    return;
-                }
-                this.state = 'MENU'; $('npcMenu').classList.remove('hidden'); this.updateNpcMenu(); 
-            }
-            closeNpcMenu() { $('npcMenu').classList.add('hidden'); this.state = 'SAFE_ZONE'; this.player.y += 40; }
-            
-            openWeaponMenu() {
-                this.state = 'MENU'; $('weaponSmithMenu').classList.remove('hidden');
-                $('smithGold').innerText = this.runData.gold;
-                const list = $('weaponList'); list.innerHTML = '';
-                
-                // WEAPON_DEFS based generation
-                for(let key in WEAPON_DEFS) {
-                    const def = WEAPON_DEFS[key];
-                    const isUnlocked = this.runData.unlockedWeapons.includes(key);
-                    const isActive = this.runData.currentWeapon === key;
-
-                    const card = document.createElement('div');
-                    card.className = `p-3 rounded border flex justify-between items-center ${isActive ? 'bg-orange-800 border-orange-500' : 'bg-gray-700 border-gray-600'}`;
-
-                    // Text part
-                    const info = document.createElement('div');
-                    info.innerHTML = `<div class="font-bold">${def.name} ${isActive ? '<span class="text-xs text-yellow-300 ml-2">[装備中]</span>' : ''}</div><div class="text-xs text-gray-400">${def.desc}</div>`;
-                    card.appendChild(info);
-
-                    // Button part
-                    const btn = document.createElement('button');
-                    if (isUnlocked) {
-                        if (isActive) {
-                            btn.className = "bg-gray-500 text-gray-300 px-3 py-1 rounded text-xs cursor-default";
-                            btn.innerText = "装備中";
-                        } else {
-                            btn.className = "bg-green-600 hover:bg-green-500 text-white px-3 py-1 rounded text-xs";
-                            btn.innerText = "装備する";
-                            btn.onclick = () => this.switchWeapon(key);
-                        }
-                    } else {
-                        const canBuy = this.runData.gold >= def.price;
-                        btn.className = `px-3 py-1 rounded text-xs ${canBuy ? 'bg-yellow-600 hover:bg-yellow-500 text-white' : 'bg-gray-600 text-gray-400 cursor-not-allowed'}`;
-                        btn.innerHTML = `購入 (${def.price} G)`;
-                        if (canBuy) btn.onclick = () => this.unlockWeapon(key);
-                    }
-                    card.appendChild(btn);
-                    list.appendChild(card);
-                }
-            }
-            closeWeaponMenu() { $('weaponSmithMenu').classList.add('hidden'); this.state = 'SAFE_ZONE'; this.player.y += 40; }
-
-            unlockWeapon(key) {
-                const def = WEAPON_DEFS[key];
-                if (this.runData.gold >= def.price) {
-                    this.runData.gold -= def.price;
-                    this.runData.unlockedWeapons.push(key);
-                    this.showNotification(`${def.name} を購入しました！`);
-                    this.switchWeapon(key); // Auto equip & Save
-                    // switchWeaponで保存されるが、念のため所持金の変更も確実に保存
-                    this.saveRunData();
-                } else {
-                    this.showNotification("お金が足りません");
-                }
-            }
-
-            updateNpcMenu() { 
-                $('npcPoints').innerText = this.metaData.points; 
-                $('metaMaxHpVal').innerText = 100 + (this.metaData.maxHpLevel * 10); 
-                $('metaAtkVal').innerText = 10 + (this.metaData.atkLevel * 2); 
-                $('metaSkillSlotVal').innerText = (3 + (this.metaData.skillSlotLevel || 0));
-                $('metaTotemVal').innerText = this.metaData.totemCount || 0;
-            }
-            upgradeMeta(type) {
-                const costs = { maxHp: 100, baseAtk: 200, skillSlot: 500, totem: 1000 };
-                if (this.metaData.points >= costs[type]) {
-                    
-                    if (type === 'skillSlot') {
-                        if ((this.metaData.skillSlotLevel || 0) >= 2) {
-                            this.showNotification("これ以上拡張できません");
-                            return;
-                        }
-                        this.metaData.skillSlotLevel = (this.metaData.skillSlotLevel || 0) + 1;
-                        this.metaData.points -= costs[type];
-                        this.updateSkillHud(); 
-                    } else if (type === 'totem') {
-                        this.metaData.totemCount = (this.metaData.totemCount || 0) + 1;
-                        this.metaData.points -= costs[type];
-                        this.showNotification("不死のトーテムを購入！");
-                    } else {
-                        this.metaData.points -= costs[type];
-                        if (type === 'maxHp') { this.metaData.maxHpLevel++; } 
-                        if (type === 'baseAtk') { this.metaData.atkLevel++; }
-                        this.player.maxHp = 100 + (this.metaData.maxHpLevel * 10); 
-                        this.player.atk = 10 + (this.metaData.atkLevel * 2); 
-                        this.player.hp = this.player.maxHp;
-                    }
-                    this.saveMetaData(); 
-                    this.updateNpcMenu();
-                } else this.showNotification("ポイント不足");
-            }
-        }
-        const game = new Game();
-    </script>
-</body>
-</html>
+Find
+No results
+No results found
