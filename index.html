@@ -161,12 +161,17 @@
 
         /* 選択肢カード */
         .choice-card {
-            transition: transform 0.2s, border-color 0.2s;
+            transition: transform 0.2s, border-color 0.2s, background-color 0.2s;
             cursor: pointer;
         }
         .choice-card:hover {
             transform: scale(1.05);
             border-color: #FACC15;
+            background-color: #374151; /* bg-gray-700 */
+        }
+        .choice-card:active {
+            transform: scale(0.95);
+            background-color: #4b5563; /* bg-gray-600 */
         }
     </style>
 </head>
@@ -360,6 +365,8 @@
             skillOrb: new THREE.MeshStandardMaterial({ color: 0x00FFFF, emissive: 0x008888 }),
             skillSlash: new THREE.MeshBasicMaterial({ color: 0xAAFFAA, side: THREE.DoubleSide, transparent: true, opacity: 0.8 }),
             skillWave: new THREE.MeshBasicMaterial({ color: 0xFF00FF, side: THREE.DoubleSide, transparent: true, opacity: 0.5 }),
+            // Indicator
+            indicator: new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0.3, side: THREE.DoubleSide }),
         };
 
         const GEO = {
@@ -370,6 +377,7 @@
             waveRing: new THREE.RingGeometry(10, 15, 32),
             straightSlash: new THREE.PlaneGeometry(60, 20),
             savePoint: new THREE.OctahedronGeometry(15, 0),
+            indicator: new THREE.PlaneGeometry(6, 60), // Long rectangle for aim indicator
         };
 
         const WEAPON_DEFS = {
@@ -751,15 +759,23 @@
             constructor(x, y, maxHp, atk, scene) {
                 this.x = x; this.y = y; this.r = 15;
                 this.maxHp = maxHp; this.hp = maxHp; this.atk = atk;
-                this.speed = 2.5; this.lastAttack = 0; this.fireRate = 600; this.weapon = 'gun';
+                this.speed = 2.5; this.lastAttack = 0; this.fireRate = 700; this.weapon = 'gun';
                 this.mesh = createHumanoidGroup(MAT.player, 1.0, true);
                 this.mesh.position.set(x, 10, y); 
+                
+                // 攻撃方向インジケーター（タッチ用）
+                this.aimIndicator = new THREE.Mesh(GEO.indicator, MAT.indicator);
+                this.aimIndicator.rotation.x = -Math.PI / 2; 
+                this.aimIndicator.position.z = 40; // プレイヤーの前方
+                this.aimIndicator.visible = false;
+                this.mesh.add(this.aimIndicator);
+
                 this.parts = { armL: this.mesh.getObjectByName("ArmL"), armR: this.mesh.getObjectByName("ArmR"), legL: this.mesh.getObjectByName("LegL"), legR: this.mesh.getObjectByName("LegR"), sword: this.mesh.getObjectByName("Sword") };
             }
             setWeapon(wep) { this.weapon = wep; if (this.parts.sword) this.parts.sword.visible = (wep === 'sword'); }
             
             // update method modified to accept vector input
-            update(moveInput, aimPos, walls) {
+            update(moveInput, aimPos, walls, isAiming) {
                 // moveInput: {x, y} (-1 to 1)
                 let dx = moveInput.x;
                 let dy = moveInput.y;
@@ -802,6 +818,9 @@
                 
                 // Look at aim position (mouse or touch aim)
                 this.mesh.lookAt(aimPos.x, 10, aimPos.y);
+
+                // インジケーター表示制御
+                this.aimIndicator.visible = isAiming;
 
                 if (this.weapon === 'sword' && Date.now() - this.lastAttack < 200) {
                     if (this.parts.armR) {
@@ -1327,6 +1346,7 @@
                 let moveY = 0;
                 let aimPos = { x: this.mouse.x, y: this.mouse.y };
                 let isAttacking = this.mouse.down;
+                let isAiming = false;
 
                 // Keyboard Logic
                 if (this.keys['KeyW'] || this.keys['ArrowUp']) moveY = -1;
@@ -1340,8 +1360,9 @@
                     moveY = this.touchInput.left.y;
                 }
                 
-                // Attack Joystick Logic
+                // Right Joystick Aim (Active state)
                 if (this.touchInput.right.active && (this.touchInput.right.x !== 0 || this.touchInput.right.y !== 0)) {
+                    isAiming = true;
                     // Update aim while holding
                     aimPos = { 
                         x: this.player.x + this.touchInput.right.x * 100, 
@@ -1356,7 +1377,7 @@
                 }
 
                 if (this.player) {
-                    this.player.update({x: moveX, y: moveY}, aimPos, this.walls);
+                    this.player.update({x: moveX, y: moveY}, aimPos, this.walls, isAiming);
                     const targetX = this.player.x; const targetZ = this.player.y + 300; 
                     this.camera.position.x += (targetX - this.camera.position.x) * 0.1;
                     this.camera.position.z += (targetZ - this.camera.position.z) * 0.1;
@@ -1618,22 +1639,24 @@
                 
                 choices.forEach(choice => {
                     const card = document.createElement('div');
-                    card.className = "choice-card bg-gray-800 border-2 border-gray-600 p-4 rounded-lg w-64 text-center flex flex-col items-center justify-between";
+                    // cursor-pointerを追加し、ホバー時の背景色変化などをTailwindクラスで強化
+                    card.className = "choice-card bg-gray-800 border-2 border-gray-600 p-6 rounded-lg w-64 text-center flex flex-col items-center justify-between cursor-pointer hover:bg-gray-700 hover:border-yellow-400 transition-all duration-200 transform hover:scale-105 active:scale-95 shadow-lg";
                     
-                    let html = `<h3 class="text-xl font-bold mb-2 ${choice.color}">${choice.title}</h3>`;
-                    html += `<p class="text-gray-300 text-sm mb-4 h-16">${choice.desc}</p>`;
+                    let html = `<h3 class="text-xl font-bold mb-3 ${choice.color} pointer-events-none">${choice.title}</h3>`;
+                    html += `<p class="text-gray-300 text-sm mb-4 h-16 pointer-events-none flex items-center justify-center">${choice.desc}</p>`;
                     
                     // Show stats
                     if (choice.type !== 'heal' && choice.type !== 'gold') {
-                        html += `<div class="text-xs text-gray-400 mb-2">現在のレベル: ${choice.currentLvl || 0}</div>`;
+                        html += `<div class="text-xs text-gray-400 mb-2 pointer-events-none">現在のレベル: ${choice.currentLvl || 0}</div>`;
                     }
+                    
+                    // タップを促す小さなテキスト（ボタンではない）
+                    html += `<div class="text-xs text-yellow-500 mt-2 font-bold pointer-events-none">TAP TO SELECT</div>`;
                     
                     card.innerHTML = html;
                     
-                    const btn = document.createElement('button');
-                    btn.className = "bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded mt-2 w-full";
-                    btn.innerText = "選択";
-                    btn.onclick = () => {
+                    // カード全体にクリックイベントを設定
+                    card.onclick = () => {
                         choice.action();
                         // Instead of nextWave, show intermission only on wave 10, 20...
                         if (this.wave % 10 === 0) {
@@ -1642,7 +1665,6 @@
                             this.nextWave();
                         }
                     };
-                    card.appendChild(btn);
 
                     container.appendChild(card);
                 });
